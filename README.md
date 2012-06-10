@@ -82,7 +82,7 @@ esm.onExiting(State.Running, new StateMachineCallback() {
 ```
 
 See the [tests](https://github.com/UnquietCode/Enum-State-Machine/blob/master/src/test/java/unquietcode/tools/esm/EnumStateMachine_T.java)
-for more usage examples, as well as the provided jovadocs.
+for more usage examples, as well as the provided javadocs.
 
 
 # Questions / Comments / Feedback
