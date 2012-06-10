@@ -7,6 +7,10 @@ Any enums can be used, and mixing and matching from different classes is allowed
 method will add all possible connections within an enum class. Use `addTransition(...)` to manually
 add states and possible transitions to an instance.
 
+All of the methods which modify, transition, or inquire about the state are synchronized, allowing
+multiple threads access to the same state machine. However, to avoid unpredictable behavior, it is
+generally better to construct your state machine up front and not modify it thereafter.
+
 # Installation
 The project is set up with a Maven POM for easy use. Download a stable tag of the project and run
 `mvn install` to install to your local environment. You can release the Maven artifact to a shared

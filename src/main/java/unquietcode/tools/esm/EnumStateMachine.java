@@ -56,12 +56,12 @@ public class EnumStateMachine {
 	/**
 	 * Resets the state machine to its initial state and clears the transition count.
 	 */
-	public void reset() {
+	public synchronized void reset() {
 		transitions = 0;
 		current = initial;
 	}
 
-	public boolean transition(Enum state) {
+	public synchronized boolean transition(Enum state) {
 		State next = getState(state);
 		if (!current.transitions.containsKey(next)) {
 			throw new TransitionException("No transition exists between "+ current +" and "+ next);
@@ -94,7 +94,7 @@ public class EnumStateMachine {
 		}
 	}
 
-	public Enum currentState() {
+	public synchronized Enum currentState() {
 		return current.theEnum;
 	}
 
@@ -107,11 +107,11 @@ public class EnumStateMachine {
 	 *
 	 * @return the current number of transitions performed
 	 */
-	public int getTransitionCount() {
+	public synchronized int getTransitionCount() {
 		return transitions;
 	}
 
-	public Enum initialState() {
+	public synchronized Enum initialState() {
 		return initial.theEnum;
 	}
 
@@ -120,11 +120,16 @@ public class EnumStateMachine {
 	 *
 	 * @param state initial state to be set after next reset
 	 */
-	public void setInitialState(Enum state) {
+	public synchronized void setInitialState(Enum state) {
 		initial = getState(state);
 	}
 
-	public void addTransitions(Enum fromState, Enum...toStates) {
+	/**
+	 * Add a transition between two states.
+	 * @param fromState the initial state
+	 * @param toStates one or more states to move to
+	 */
+	public synchronized void addTransitions(Enum fromState, Enum...toStates) {
 		addTransitions(null, fromState, toStates);
 	}
 
@@ -132,7 +137,7 @@ public class EnumStateMachine {
 	 * Adds a callback which will be executed whenever the specified state
 	 * is entered, via any transition.
 	 */
-	public void onEntering(Enum state, StateMachineCallback callback) {
+	public synchronized void onEntering(Enum state, StateMachineCallback callback) {
 		State s = getState(state);
 		s.entryActions.add(callback);
 	}
@@ -141,18 +146,26 @@ public class EnumStateMachine {
 	 * Adds a callback which will be executed whenever the specified state
 	 * is exited, via any transition.
 	 */
-	public void onExiting(Enum state, StateMachineCallback callback) {
+	public synchronized void onExiting(Enum state, StateMachineCallback callback) {
 		State s = getState(state);
 		s.exitActions.add(callback);
 	}
 
 	/**
 	 * Add a transition from one state to 0..n other states. The callback
-	 * will be executed as the transition is occurring.
+	 * will be executed as the transition is occurring. If the state machine
+	 * is modified during this operation, it will be reset. Adding a new
+	 * callback to an exising transition will not be perceived as modification.
+	 *
+	 * @param callback callback, can be null
+	 * @param fromState state moving from
+	 * @param toStates states moving to
+	 * @return true if the state machine was modified and a reset occurred, false otherwise
 	 */
-	public void addTransitions(StateMachineCallback callback, Enum fromState, Enum...toStates) {
+	public synchronized boolean addTransitions(StateMachineCallback callback, Enum fromState, Enum...toStates) {
 		Set<Enum> set = makeSet(toStates);
 		State from = getState(fromState);
+		boolean modified = false;
 
 		for (Enum anEnum : set) {
 			State to = getState(anEnum);
@@ -163,12 +176,19 @@ public class EnumStateMachine {
 			} else {
 				transition = new Transition(to);
 				from.transitions.put(to, transition);
+				modified = true;
 			}
 
 			if (callback != null) {
 				transition.callbacks.add(callback);
 			}
 		}
+
+		if (modified) {
+			reset();
+		}
+
+		return modified;
 	}
 
 	/**
@@ -180,7 +200,7 @@ public class EnumStateMachine {
 	 * @param toStates to states
 	 * @return true if the transitions were modified, false otherwise
 	 */
-	public boolean removeTransitions(Enum fromState, Enum...toStates) {
+	public synchronized boolean removeTransitions(Enum fromState, Enum...toStates) {
 		Set<Enum> set = makeSet(toStates);
 		State from = getState(fromState);
 		boolean modified = false;
@@ -196,11 +216,11 @@ public class EnumStateMachine {
 		return modified;
 	}
 
-	public void setTransitions(Enum fromState, Enum...toStates) {
+	public synchronized void setTransitions(Enum fromState, Enum...toStates) {
 		setTransitions(null, fromState, toStates);
 	}
 
-	public void setTransitions(StateMachineCallback callback, Enum fromState, Enum...toStates) {
+	public synchronized void setTransitions(StateMachineCallback callback, Enum fromState, Enum...toStates) {
 		State state = getState(fromState);
 		state.transitions.clear();
 		addTransitions(callback, fromState, toStates);
@@ -213,7 +233,7 @@ public class EnumStateMachine {
 	 * @param clazz         The class of the enum to add.
 	 * @param includeSelf   True if enums are allowed to transition to themselves.
 	 */
-	public void addAll(Class clazz, boolean includeSelf) {
+	public synchronized void addAll(Class clazz, boolean includeSelf) {
 		if (clazz == null || !clazz.isEnum()) {
 			throw new IllegalArgumentException("A valid enum class must be provided.");
 		}
@@ -421,7 +441,7 @@ public class EnumStateMachine {
 	 * @param   string   configuration string
 	 * @throws  ParseException  if the configuration string is malformed
 	 */
-	public void configureByString(String string) throws ParseException {
+	public synchronized void configureByString(String string) throws ParseException {
 		EnumStringParser parser = new EnumStringParser(string.trim());
 
 		String initialString = parser.getString(Token.DIVIDER);
@@ -479,7 +499,7 @@ public class EnumStateMachine {
 		return e;
 	}
 
-	public String fullString(Enum e) {
+	private String fullString(Enum e) {
 		if (e == null)
 			return null;
 
