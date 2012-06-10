@@ -53,6 +53,9 @@ public class EnumStateMachine {
 		configureByString(configuration);
 	}
 
+	/**
+	 * Resets the state machine to its initial state and clears the transition count.
+	 */
 	public void reset() {
 		transitions = 0;
 		current = initial;
@@ -166,6 +169,31 @@ public class EnumStateMachine {
 				transition.callbacks.add(callback);
 			}
 		}
+	}
+
+	/**
+	 * Removes the set of transitions from the given state.
+	 * When the state machine is modified, this method will
+	 * return true and the state machine will be reset.
+	 *
+	 * @param fromState from state
+	 * @param toStates to states
+	 * @return true if the transitions were modified, false otherwise
+	 */
+	public boolean removeTransitions(Enum fromState, Enum...toStates) {
+		Set<Enum> set = makeSet(toStates);
+		State from = getState(fromState);
+		boolean modified = false;
+
+		for (Enum anEnum : set) {
+			State to = getState(anEnum);
+			if (from.transitions.remove(to) != null) {
+				modified = true;
+			}
+		}
+
+		if (modified) { reset(); }
+		return modified;
 	}
 
 	public void setTransitions(Enum fromState, Enum...toStates) {
@@ -387,7 +415,7 @@ public class EnumStateMachine {
 	 * "initial | state1 : {transition1, transition2} | state2 : {transition3, transition4}"
 	 *
 	 * The states are the class strings of the enums being used. They will be processed via reflection.
-	 * The existing information is preserved; used clear() prior to avoid that.
+	 * The existing information is preserved; create a new state machine instead to avoid that.
 	 * When the operation is complete, the state machine is reset.
 	 *
 	 * @param   string   configuration string

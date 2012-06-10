@@ -16,6 +16,28 @@ public class EnumStateMachine_T {
 	}
 
 
+	@Test
+	public void removeTransition() {
+		EnumStateMachine esm = getThreadLikeMachine();
+		esm.transition(State.Running);
+		esm.transition(State.Paused);
+
+		boolean modified = esm.removeTransitions(State.Running, State.Paused);
+		Assert.assertTrue("expected modification", modified);
+		Assert.assertEquals("expected reset", 0, esm.getTransitionCount());
+
+		esm.transition(State.Running);
+		boolean failed = false;
+
+		try {
+			esm.transition(State.Paused);
+		} catch (TransitionException ex) {
+			failed = true;
+		}
+
+		Assert.assertTrue("expected an exception", failed);
+	}
+
 //	@Test
 //	public void stringParsingFromScratch() {
 		// TODO
