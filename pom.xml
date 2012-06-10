@@ -1,18 +1,19 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+	<modelVersion>4.0.0</modelVersion>
 
-  <groupId>unquietcode.tools.esm</groupId>
-  <artifactId>esm</artifactId>
-  <version>1.0</version>
-  <packaging>jar</packaging>
+	<groupId>unquietcode.tools.esm</groupId>
+	<artifactId>esm</artifactId>
+	<version>1.0</version>
+	<packaging>jar</packaging>
 
-  <name>esm</name>
-  <url>http://maven.apache.org</url>
+	<name>Enum State Machine</name>
+	<description>A small Java tool which provides simple state machine semantics using enums.</description>
+	<url>http://maven.apache.org</url>
 
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
 
 	<build>
 		<plugins>
@@ -26,6 +27,31 @@
 					</includes>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version> 2.1.2</version>
+				<executions>
+					<execution>
+						<phase>verify</phase>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version> 2.8.1</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 
@@ -37,4 +63,12 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+
+	<distributionManagement>
+		<repository>
+			<id>repo</id>
+			<name>UnquietCode Repository</name>
+			<url>http://www.unquietcode.com/maven/releases</url>
+		</repository>
+	</distributionManagement>
 </project>
