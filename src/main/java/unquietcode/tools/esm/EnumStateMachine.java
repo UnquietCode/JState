@@ -31,56 +31,258 @@ import java.util.*;
  * Null is a valid state in this system. The initial starting point is null by default.
  */
 public class EnumStateMachine {
-	private Map<Enum, Set<Enum>> states = new HashMap<Enum, Set<Enum>>();
-	private Enum initial;
-	private Enum current;
+	private Map<Enum, State> states = new HashMap<Enum, State>();
+	private State initial;
+	private State current;
 	int transitions;
 
+
+	public EnumStateMachine() {
+		initial = null;
+		current = initial;
+		transitions = 0;
+	}
+
+	public EnumStateMachine(Enum initial) {
+		this.initial = getState(initial);
+		current = this.initial;
+		transitions = 0;
+	}
+
+	public EnumStateMachine(String configuration) throws ParseException {
+		configureByString(configuration);
+	}
+
+	public void reset() {
+		transitions = 0;
+		current = initial;
+	}
+
+	public boolean transition(Enum state) {
+		State next = getState(state);
+		if (!current.transitions.containsKey(next)) {
+			throw new TransitionException("No transition exists between "+ current +" and "+ next);
+		}
+
+		Transition transition = current.transitions.get(next);
+		for (StateMachineCallback callback : transition.callbacks) {
+			callback.performAction();
+		}
+
+		transitions += 1;
+
+		if (current == next) {
+			return false;
+		} else {
+			current = next;
+			return true;
+		}
+	}
+
+	public Enum state() {
+		return current.theEnum;
+	}
+
+	public Enum getInitialState() {
+		return initial.theEnum;
+	}
+
 	/**
-	 * Basic form is:
-	 * "state1 : {transition1, transition2}, state2 : {transition3, transition4}, state3 : {}"
+	 * Will not reset, just sets the initial state.
 	 *
-	 * Listing empty sets is optional. Can also add the intial state to the front like so:
-	 * "initial | state1 : {transition1, transition2} | state2 : {transition3, transition4}"
-	 *
-	 * The states are the class strings of the enums being used. They will be processed via reflection.
-	 * The existing information is preserved; used clear() prior to avoid that.
-	 * When the operation is complete, the state machine is reset.
-	 *
-	 * @param   string   configuration string
-	 * @throws  ParseException  if the configuration string is malformed
+	 * @param state initial state to be set after next reset
 	 */
-	public void configureByString(String string) throws ParseException {
-		EnumStringParser parser = new EnumStringParser(string.trim());
+	public void setInitialState(Enum state) {
+		initial = getState(state);
+	}
+
+	public void addTransitions(Enum fromState, Enum...toStates) {
+		addTransitions(fromState, null, toStates);
+	}
+
+	/**
+	 * Add a transition from one state to 0..n other states. The callback
+	 * will be executed as the transition is occurring.
+	 */
+	public void addTransitions(Enum fromState, StateMachineCallback callback, Enum...toStates) {
+		Set<Enum> set = makeSet(toStates);
+		State from = getState(fromState);
+
+		for (Enum anEnum : set) {
+			State to = getState(anEnum);
+			Transition transition;
+
+			if (from.transitions.containsKey(to)) {
+				transition = from.transitions.get(to);
+			} else {
+				transition = new Transition(to);
+				from.transitions.put(to, transition);
+			}
+
+			if (callback != null) {
+				transition.callbacks.add(callback);
+			}
+		}
+	}
+
+	public void setTransitions(Enum fromState, Enum...toStates) {
+		State state = getState(fromState);
+		state.transitions.clear();
+		addTransitions(fromState, toStates);
+	}
+
+	private Set<Enum> makeSet(Enum states[]) {
+		Set<Enum> set = new HashSet<Enum>();
+
+		if (states == null) {
+			set.add(null);
+		} else {
+			set.addAll(Arrays.asList(states));
+		}
+
+		return set;
+	}
+
+	/**
+	 * For every enum in the class, creates a transition between that enum and the others.
+	 * If includeSelf is true, the enums are allowed to transition back to themselves.
+	 *
+	 * @param clazz         The class of the enum to add.
+	 * @param includeSelf   True if enums are allowed to transition to themselves.
+	 */
+	public void addAll(Class clazz, boolean includeSelf) {
+		if (clazz == null || !clazz.isEnum()) {
+			throw new IllegalArgumentException("A valid enum class must be provided.");
+		}
+
+		Enum[] full = (Enum[]) clazz.getEnumConstants();
+
+		if (includeSelf) {
+			for (Enum e : full) {
+				addTransitions(e, full);
+			}
+		} else {
+			for (Enum e : full) {
+				addTransitions(e, full);
+
+				State self = getState(e);
+				self.transitions.remove(self);
+			}
+		}
+	}
+
+// TODO fix this up
+//	@Override
+//	public boolean equals(Object o) {
+//		if (o.getClass() != this.getClass())
+//			return false;
+//
+//		EnumStateMachine other = (EnumStateMachine) o;
+//
+//		if (states.size() != other.states.size()) {
+//			return false;
+//		}
+//
+//		for (Map.Entry<Enum, Set<Enum>> entry : states.entrySet()) {
+//			if (!other.states.containsKey(entry.getKey()))
+//				return false;
+//
+//			Set<Enum> tSet = entry.getValue();
+//			Set<Enum> oSet = other.states.get(entry.getKey());
+//
+//			if (tSet.size() != oSet.size())
+//				return false;
+//
+//			for (Enum e : tSet) {
+//				if (!oSet.contains(e))
+//					return false;
+//			}
+//		}
+//
+//		return true;
+//	}
+
+	@Override
+	public String toString() {
 		StringBuilder sb = new StringBuilder();
 
-		String initialString = parser.getString(Token.DIVIDER);
-		if (initialString != null) {
-			initial = instantiate(initialString);
+		if (initial != null) {
+			sb.append(fullString(initial.theEnum)).append(" | \n");
 		}
 
-		while (!parser.isEmpty()) {
-			String name = parser.getString(Token.NAME_END);
-			parser.chomp(Token.SET_START);
-			String elements[] = parser.getStrings(Token.SET_END, Token.COMMA);
-			parser.chomp(Token.DIVIDER);
+		int i = 1;
+		for (Map.Entry<Enum, State> entry : states.entrySet()) {
+			sb.append("\t").append(fullString(entry.getKey())).append(" : {");
 
-			if (name == null || elements == null) {
-				throw new ParseException("Malformed configuration string.");
+			int j = 1;
+			for (Transition t : entry.getValue().transitions.values()) {
+				sb.append(fullString(t.next.theEnum));
+
+				if (j++ != entry.getValue().transitions.size()) {
+					sb.append(", ");
+				}
 			}
 
-			Enum state = instantiate(name);
-			HashSet<Enum> transitions = new HashSet<Enum>();
+			sb.append("}");
 
-			for (String e : elements) {
-				transitions.add(instantiate(e));
-			}
-
-			states.put(state, transitions);
+			if (i++ != states.size())
+				sb.append(" | \n");
 		}
 
-		reset();
+		return sb.toString();
 	}
+
+	private State getState(Enum token) {
+		if (states.containsKey(token)) {
+			return states.get(token);
+		}
+
+		State s = new State(token);
+		states.put(token, s);
+		return s;
+	}
+
+	private static class State {
+		final Enum theEnum;
+		final Map<State, Transition> transitions = new HashMap<State, Transition>();
+
+		State(Enum theEnum) {
+			this.theEnum = theEnum;
+		}
+
+		public @Override boolean equals(Object obj) {
+			if (!(obj instanceof State)) { return false; }
+			State other = (State) obj;
+
+			if (this.theEnum == null) {
+				return other.theEnum == null;
+			} else {
+				return this.theEnum.equals(other.theEnum);
+			}
+		}
+	}
+
+	private static class Transition {
+		final State next;
+		final Set<StateMachineCallback> callbacks = new HashSet<StateMachineCallback>();
+
+		Transition(State next) {
+			this.next = next;
+		}
+
+//		public @Override boolean equals(Object obj) {
+//			if (!(obj instanceof Transition)) { return false; }
+//			Transition other = (Transition) obj;
+//
+//			if (this.next.theEnum == null) {
+//				return other.next.theEnum == null;
+//			} else {
+//				return this.next.theEnum.equals(other.next.theEnum);
+//			}
+//		}
+	}
+
+	//==o==o==o==o==o==o==| String Configuration |==o==o==o==o==o==o==//
 
 	enum Token {
 		@Value("{")
@@ -97,51 +299,60 @@ public class EnumStateMachine {
 
 		@Value(",")
 		COMMA;
-
 	}
 
-
-	/*
-		I guess you can break it down into basic iterations:
-
-			+ the initial, which could be empty
-			+ the state strings, which could number 0
-				+ the state string
-				+ the set string
-					+ the class strings, which could number 0
-
-
-			find pipe. if none, is it initial only or no initial?
-			find colon, if none, fail
-			find { after colon
-			find } after {
+	/**
+	 * Basic form is:
+	 * "state1 : {transition1, transition2}, state2 : {transition3, transition4}, state3 : {}"
+	 *
+	 * Listing empty sets is optional. Can also add the initial state to the front like so:
+	 * "initial | state1 : {transition1, transition2} | state2 : {transition3, transition4}"
+	 *
+	 * The states are the class strings of the enums being used. They will be processed via reflection.
+	 * The existing information is preserved; used clear() prior to avoid that.
+	 * When the operation is complete, the state machine is reset.
+	 *
+	 * @param   string   configuration string
+	 * @throws  ParseException  if the configuration string is malformed
 	 */
+	public void configureByString(String string) throws ParseException {
+		EnumStringParser parser = new EnumStringParser(string.trim());
 
-	private <T, V> void addToHashSet(Map<T, Set<V>> map, T key, Set<V> data) {
-		if (map.containsKey(key)) {
-			map.get(key).addAll(data);
-		} else {
-			Set<V> set = new HashSet<V>();
-			set.addAll(data);
-			map.put(key, set);
+		String initialString = parser.getString(Token.DIVIDER);
+		if (initialString != null) {
+			initial = getState(instantiate(initialString));
 		}
-	}
 
-	private <T, V> void addToHashSet(Map<T, Set<V>> map, T key, V data) {
-		if (map.containsKey(key)) {
-			map.get(key).add(data);
-		} else {
-			Set<V> set = new HashSet<V>();
-			set.add(data);
-			map.put(key, set);
+		while (!parser.isEmpty()) {
+			String name = parser.getString(Token.NAME_END);
+			parser.chomp(Token.SET_START);
+			String elements[] = parser.getStrings(Token.SET_END, Token.COMMA);
+			parser.chomp(Token.DIVIDER);
+
+			if (name == null || elements == null) {
+				throw new ParseException("Malformed configuration string.");
+			}
+
+			State state = getState(instantiate(name));
+
+			for (String e : elements) {
+				State next = getState(instantiate(e));
+
+				if (!state.transitions.containsKey(next)) {
+					Transition t = new Transition(next);
+					state.transitions.put(next, t);
+				}
+			}
 		}
+
+		reset();
 	}
 
 	@SuppressWarnings("unchecked")
 	private Enum instantiate(String string) throws ParseException {
 		if (string.equals("null"))
 			return null;
-		
+
 		int dot = string.lastIndexOf(".");
 
 		if (dot == -1  ||  dot+1 == string.length()) {
@@ -162,192 +373,11 @@ public class EnumStateMachine {
 		return e;
 	}
 
-
-	public @Override
-	String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(fullString(initial)).append(" | \n");
-
-		int i = 1;
-		for (Map.Entry<Enum, Set<Enum>> entry : states.entrySet()) {
-			sb.append(fullString(entry.getKey())).append(" : {");
-
-			int j = 1;
-			for (Enum e : entry.getValue()) {
-				sb.append(fullString(e));
-
-				if (j++ != entry.getValue().size())
-					sb.append(", ");
-			}
-
-			sb.append("}");
-
-			if (i++ != states.size())
-				sb.append(" | \n");
-		}
-
-		return sb.toString();
-	}
-
 	public String fullString(Enum e) {
 		if (e == null)
 			return null;
 
 		return e.getClass().getName() + "." + e.toString();
-	}
-
-	// need full body because this(null) is ambiguous with String
-	public EnumStateMachine() {
-		initial = null;
-		current = initial;
-		transitions = 0;
-	}
-
-	public EnumStateMachine(Enum initial) {
-		this.initial = initial;
-		current = initial;
-		transitions = 0;
-	}
-
-	public EnumStateMachine(String configuration) throws ParseException {
-		configureByString(configuration);
-	}
-
-	public static class TransitionException extends RuntimeException {
-		public TransitionException(String message) {
-			super(message);
-		}
-	}
-
-	public static class ParseException extends Exception {
-		public ParseException(String message) {
-			super(message);
-		}
-	}
-
-	public void reset() {
-		transitions = 0;
-		current = initial;
-	}
-
-	public boolean transition(Enum state) {
-		Set<Enum> set = states.get(current);
-
-		if (set == null  ||  set.size() == 0  ||  !set.contains(state)) {
-			throw new TransitionException("No transition exists between "+ current +" and "+ state);
-		} else {
-			transitions += 1;
-
-			if (current == state) {
-				return false;
-			} else {
-				current = state;
-				return true;
-			}
-		}
-	}
-
-	public Enum state() {
-		return current;
-	}
-
-	public Enum getInitialState() {
-		return initial;
-	}
-
-	/**
-	 * will not reset
-	 *
-	 * @param state
-	 */
-	public void setInitialState(Enum state) {
-		initial = state;
-	}
-
-	public boolean addTransitions(Enum state, Enum...transitions) {
-		Set<Enum> set = makeSet(transitions);
-
-		if (states.containsKey(state)) {
-			states.get(state).addAll(set);
-			return false;
-		} else {
-			states.put(state, set);
-			return true;
-		}
-	}
-
-	public boolean setTransitions(Enum state, Enum...transitions) {
-		Set<Enum> set = makeSet(transitions);
-		return states.put(state, set) == null;
-	}
-
-	private Set<Enum> makeSet(Enum states[]) {
-		Set<Enum> set = new HashSet<Enum>();
-
-		if (states == null) {
-			set.add(null);
-		} else {
-			set.addAll(Arrays.asList(states));
-		}
-
-		return set;
-	}
-
-
-	public @Override
-	boolean equals(Object o) {
-		if (o.getClass() != this.getClass())
-			return false;
-
-		EnumStateMachine other = (EnumStateMachine) o;
-
-		if (states.size() != other.states.size()) {
-			return false;
-		}
-
-		for (Map.Entry<Enum, Set<Enum>> entry : states.entrySet()) {
-			if (!other.states.containsKey(entry.getKey()))
-				return false;
-
-			Set<Enum> tSet = entry.getValue();
-			Set<Enum> oSet = other.states.get(entry.getKey());
-
-			if (tSet.size() != oSet.size())
-				return false;
-
-			for (Enum e : tSet) {
-				if (!oSet.contains(e))
-					return false;
-			}
-		}
-
-		return true;
-	}
-
-	/**
-	 * For every enum in the class, creates a transition between that enum and the others.
-	 * If includeSelf is true, the enums are allowed to transition back to themselves.
-	 *
-	 * @param clazz         The class of the enum to add.
-	 * @param includeSelf   True if enums are allowed to transition to themselves.
-	 */
-	public void addAll(Class clazz, boolean includeSelf) {
-		if (clazz == null || !clazz.isEnum())
-			return;
-
-		Set<Enum> full = new HashSet<Enum>(Arrays.asList((Enum[]) clazz.getEnumConstants()));
-
-		if (includeSelf) {
-			for (Enum e : full) {
-				states.put(e, new HashSet<Enum>(full));
-			}
-		} else {
-			for (Enum e : full) {
-				Set<Enum> rest = new HashSet<Enum>(full);
-				rest.remove(e);
-				states.put(e,rest);
-			}
-		}
 	}
 }
 
