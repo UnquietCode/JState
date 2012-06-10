@@ -49,7 +49,7 @@ public class EnumStringParser {
 
 
 	public boolean isEmpty() {
-		// I'm hoping the string is put on the stack for immediate collection.
+		// I hope the string is put on the stack for immediate collection.
 		return buffer.toString().trim().length() == 0;
 	}
 
