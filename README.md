@@ -25,6 +25,14 @@ You can also use the repository which I host myself. Just add the following to y
 		<url>http://www.unquietcode.com/maven/releases</url>
 	</repository>
 </repositories>
+
+...
+
+<dependency>
+    <groupId>unquietcode.tools.esm</groupId>
+    <artifactId>esm</artifactId>
+    <version>1.0</version>
+</dependency>
 ```
 
 # Usage
