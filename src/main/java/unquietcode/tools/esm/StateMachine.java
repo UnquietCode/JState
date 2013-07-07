@@ -107,21 +107,39 @@ public class StateMachine<T extends State> implements IStateMachine<T> {
 	}
 
 	@Override
-	public synchronized void onEntering(T state, StateMachineCallback callback) {
-		StateContainer s = getState(state);
+	public synchronized CallbackRegistration onEntering(T state, final StateMachineCallback callback) {
+		final StateContainer s = getState(state);
 		s.entryActions.add(callback);
+
+		return new CallbackRegistration() {
+			public void unregister() {
+				s.entryActions.remove(callback);
+			}
+		};
 	}
 
 	@Override
-	public synchronized void onExiting(T state, StateMachineCallback callback) {
-		StateContainer s = getState(state);
+	public synchronized CallbackRegistration onExiting(T state, final StateMachineCallback callback) {
+		final StateContainer s = getState(state);
 		s.exitActions.add(callback);
+
+		return new CallbackRegistration() {
+			public void unregister() {
+				s.exitActions.remove(callback);
+			}
+		};
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public synchronized void onTransition(T from, T to, StateMachineCallback callback) {
+	public synchronized CallbackRegistration onTransition(final T from, final T to, final StateMachineCallback callback) {
 		addTransitions(callback, false, from, to);
+
+		return new CallbackRegistration() {
+			public void unregister() {
+				removeCallback(callback, from, to);
+			}
+		};
 	}
 
 	@Override
@@ -182,7 +200,7 @@ public class StateMachine<T extends State> implements IStateMachine<T> {
 	}
 
 	@Override
-	public synchronized boolean removeTransitions(T fromState, T... toStates) {
+	public synchronized boolean removeTransitions(T fromState, T...toStates) {
 		Set<State> set = makeSet(toStates);
 		StateContainer from = getState(fromState);
 		boolean modified = false;
@@ -196,6 +214,20 @@ public class StateMachine<T extends State> implements IStateMachine<T> {
 
 		if (modified) { reset(); }
 		return modified;
+	}
+
+	private void removeCallback(StateMachineCallback callback, T fromState, T...toStates) {
+		Set<State> set = makeSet(toStates);
+		StateContainer from = getState(fromState);
+
+		for (State state : set) {
+			StateContainer to = getState(state);
+			Transition transition = from.transitions.get(to);
+
+			if (transition != null) {
+				transition.callbacks.remove(callback);
+			}
+		}
 	}
 
 	@Override
@@ -367,7 +399,7 @@ public class StateMachine<T extends State> implements IStateMachine<T> {
 //		}
 	}
 
-	private String fullString(State state) {
+	private static String fullString(State state) {
 		return state != null ? state.getClass().getName() + "." + state.toString() : null;
 	}
 }

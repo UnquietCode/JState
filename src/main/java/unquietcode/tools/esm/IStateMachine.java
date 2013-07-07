@@ -5,16 +5,20 @@ package unquietcode.tools.esm;
  * @version 2013-07-07
  */
 public interface IStateMachine<T> {
+
+	/**
+	 * Transition to the provided state.
+	 * If the transition is not valid, an exception is thrown.
+	 * @param state next state to transition to
+	 * @return true if transitioned, false if already in this state
+	 */
+	boolean transition(T state);
+
 	/**
 	 * Resets the state machine to its initial state and clears
 	 * the transition count.
 	 */
 	void reset();
-
-	boolean transition(T state);
-
-	@SuppressWarnings("unchecked")
-	T currentState();
 
 	/**
 	 * Get the total number of transitions performed by the state machine, since
@@ -27,8 +31,8 @@ public interface IStateMachine<T> {
 	 */
 	long transitionCount();
 
-	@SuppressWarnings("unchecked")
 	T initialState();
+	T currentState();
 
 	/**
 	 * Will not reset, just sets the initial state.
@@ -41,25 +45,21 @@ public interface IStateMachine<T> {
 	 * Adds a callback which will be executed whenever the specified state
 	 * is entered, via any transition.
 	 */
-	void onEntering(T state, StateMachineCallback callback);
+	CallbackRegistration onEntering(T state, StateMachineCallback callback);
 
 	/**
 	 * Adds a callback which will be executed whenever the specified state
 	 * is exited, via any transition.
 	 */
-	void onExiting(T state, StateMachineCallback callback);
+	CallbackRegistration onExiting(T state, StateMachineCallback callback);
 
 	/**
 	 * Adds a callback which will be executed whenever the specified state
 	 * is exited, via any transition.
 	 */
-	@SuppressWarnings("unchecked")
-	void onTransition(T from, T to, StateMachineCallback callback);
+	CallbackRegistration onTransition(T from, T to, StateMachineCallback callback);
 
-	@SuppressWarnings("unchecked")
 	boolean addTransition(T fromState, T toState);
-
-	@SuppressWarnings("unchecked")
 	boolean addTransition(T fromState, T toState, StateMachineCallback callback);
 
 	/**
@@ -67,7 +67,7 @@ public interface IStateMachine<T> {
 	 * @param fromState the initial state
 	 * @param toStates one or more states to move to
 	 */
-	boolean addTransitions(T fromState, T... toStates);
+	boolean addTransitions(T fromState, T...toStates);
 
 	/**
 	 * Add a transition from one state to 0..n other states. The callback
@@ -83,10 +83,10 @@ public interface IStateMachine<T> {
 	boolean addTransitions(T fromState, T[] toStates, StateMachineCallback callback);
 
 	/*
-			Gets around the inability to create generic arrays by flipping the
-			callback parameter position, thus freeing up the vararg parameter.
-		 */
-	boolean addTransitions(StateMachineCallback callback, T fromState, T... toStates);
+		Gets around the inability to create generic arrays by flipping the
+		callback parameter position, thus freeing up the vararg parameter.
+	 */
+	boolean addTransitions(StateMachineCallback callback, T fromState, T...toStates);
 
 	/**
 	 * Removes the set of transitions from the given state.
@@ -100,6 +100,5 @@ public interface IStateMachine<T> {
 	boolean removeTransitions(T fromState, T... toStates);
 
 	void setTransitions(T fromState, T... toStates);
-
 	void setTransitions(StateMachineCallback callback, T fromState, T... toStates);
 }

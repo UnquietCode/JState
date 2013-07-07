@@ -109,18 +109,18 @@ public class EnumStateMachine<T extends Enum<T>> implements IStateMachine<T> {
 	}
 
 	@Override
-	public void onEntering(T state, StateMachineCallback callback) {
-		proxy.onEntering(EnumWrapper.$(state), callback);
+	public CallbackRegistration onEntering(T state, StateMachineCallback callback) {
+		return proxy.onEntering(EnumWrapper.$(state), callback);
 	}
 
 	@Override
-	public void onExiting(T state, StateMachineCallback callback) {
-		proxy.onExiting(EnumWrapper.$(state), callback);
+	public CallbackRegistration onExiting(T state, StateMachineCallback callback) {
+		return proxy.onExiting(EnumWrapper.$(state), callback);
 	}
 
 	@Override
-	public void onTransition(T from, T to, StateMachineCallback callback) {
-		proxy.onTransition(EnumWrapper.$(from), EnumWrapper.$(to), callback);
+	public CallbackRegistration onTransition(T from, T to, StateMachineCallback callback) {
+		return proxy.onTransition(EnumWrapper.$(from), EnumWrapper.$(to), callback);
 	}
 
 	@Override
