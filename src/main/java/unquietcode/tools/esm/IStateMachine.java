@@ -4,21 +4,7 @@ package unquietcode.tools.esm;
  * @author Ben Fagin
  * @version 2013-07-07
  */
-public interface IStateMachine<T> {
-
-	/**
-	 * Transition to the provided state.
-	 * If the transition is not valid, an exception is thrown.
-	 * @param state next state to transition to
-	 * @return true if transitioned, false if already in this state
-	 */
-	boolean transition(T state);
-
-	/**
-	 * Resets the state machine to its initial state and clears
-	 * the transition count.
-	 */
-	void reset();
+public interface IStateMachine<T> extends StateMachineController<T> {
 
 	/**
 	 * Get the total number of transitions performed by the state machine, since
@@ -30,9 +16,6 @@ public interface IStateMachine<T> {
 	 * @return the current number of transitions performed
 	 */
 	long transitionCount();
-
-	T initialState();
-	T currentState();
 
 	/**
 	 * Will not reset, just sets the initial state.

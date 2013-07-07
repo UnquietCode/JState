@@ -7,7 +7,7 @@ package unquietcode.tools.esm;
  * @author Ben Fagin
  * @version 2013-04-02
  */
-public interface StateMachineController {
+public interface StateMachineController<T> {
 
 	/**
 	 * Transition the state machine to the next state.
@@ -17,7 +17,7 @@ public interface StateMachineController {
 	 *
 	 * @throws TransitionException if a violation of the available transitions occurs
 	 */
-	boolean transition(Enum state) throws TransitionException;
+	boolean transition(T state) throws TransitionException;
 
 	/**
 	 * Returns the current state for this state machine.
@@ -25,7 +25,7 @@ public interface StateMachineController {
 	 *
 	 * @return the current state
 	 */
-	<T extends Enum> T currentState();
+	T currentState();
 
 	/**
 	 * Returns the initial state set for this state machine.
@@ -33,7 +33,7 @@ public interface StateMachineController {
 	 *
 	 * @return the initial state
 	 */
-	<T extends Enum> T initialState();
+	T initialState();
 
 	/**
 	 * Resets the state machine to its initial state and clears the transition count.
