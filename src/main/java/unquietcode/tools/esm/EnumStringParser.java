@@ -1,5 +1,5 @@
 /*******************************************************************************
- Copyright 2011 Benjamin Fagin
+ Copyright 2013 Benjamin Fagin
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,53 +19,95 @@
 
 package unquietcode.tools.esm;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author  Benjamin Fagin
- * @version 12-23-2010
- * @version 06-10-2012
+ * @version 07-06-2013
  */
 public class EnumStringParser {
-	private Map<Enum, String> valueCache = new HashMap<Enum, String>();
-	private StringBuffer buffer;
+	private final StringBuffer buffer;
 
-
-	public EnumStringParser(String string) {
-		buffer = new StringBuffer(string);
-	}
-
-	public EnumStringParser(StringBuffer buffer) {
-		this.buffer = new StringBuffer(buffer);
+	private EnumStringParser(StringBuffer buffer) {
+		this.buffer = buffer;
 	}
 
 
-	public boolean isEmpty() {
+	/**
+	 * Basic form is:
+	 * "state1 : {transition1, transition2}, state2 : {transition3, transition4}, state3 : {}"
+	 *
+	 * Listing empty sets is optional. Can also add the initial state to the front like so:
+	 * "initial | state1 : {transition1, transition2} | state2 : {transition3, transition4}"
+	 *
+	 * The states are the class strings of the enums being used. They will be processed via reflection.
+	 * The existing information is preserved; create a new state machine instead to avoid that.
+	 * When the operation is complete, the state machine is reset.
+	 *
+	 * @param   string   configuration string
+	 * @throws  ParseException  if the configuration string is malformed
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T extends Enum<T>> EnumStateMachine<T> getStateMachine(String string) throws ParseException {
+		EnumStringParser parser = new EnumStringParser(new StringBuffer(string));
+		return parser.build();
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T extends Enum<T>> EnumStateMachine<T> getStateMachine(StringBuffer buffer) throws ParseException {
+		EnumStringParser parser = new EnumStringParser(new StringBuffer(buffer));
+		return parser.build();
+	}
+
+	//---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---//
+
+	@SuppressWarnings("unchecked")
+	private EnumStateMachine build() throws ParseException {
+		EnumStateMachine esm = new EnumStateMachine();
+		eatWhiteSpace();
+
+		String initialString = getString(Token.DIVIDER);
+		if (initialString != null) {
+			esm.setInitialState(instantiate(initialString));
+		}
+
+		while (!isEmpty()) {
+			String name = getString(Token.NAME_END);
+			chomp(Token.SET_START);
+			String elements[] = getStrings(Token.SET_END, Token.COMMA);
+			chomp(Token.DIVIDER);
+
+			if (name == null || elements == null) {
+				throw new ParseException("Malformed configuration string.");
+			}
+
+			Enum from = instantiate(name);
+
+			for (String _to : elements) {
+				Enum to = instantiate(_to);
+				esm.addTransition(from, to);
+			}
+		}
+
+		return esm;
+	}
+
+	// TODO get rid of this with smarter parsing
+	private boolean isEmpty() {
 		// I hope the string is put on the stack for immediate collection.
 		return buffer.toString().trim().length() == 0;
 	}
 
-	public String value(Enum e) {
-		return extractValue(e);
-	}
-
-	public void chomp(Enum token) {
+	private void chomp(Token token) {
 		match(token);
 	}
 
-	public String getString(Enum token) {
+	private String getString(Token token) {
 		return match(token);
 	}
 
-	public Integer getInt(Enum token) {
+	private Integer getInt(Token token) throws ParseException {
 		String s = getString(token);
 		if (s == null) { return null; }
 
@@ -76,7 +118,7 @@ public class EnumStringParser {
 		}
 	}
 
-	public Boolean getBoolean(Enum token) {
+	private Boolean getBoolean(Token token) throws ParseException {
 		String s = getString(token);
 		if (s == null) { return null; }
 
@@ -87,7 +129,7 @@ public class EnumStringParser {
 		}
 	}
 
-	public Double getDouble(Enum token) {
+	private Double getDouble(Token token) throws ParseException {
 		String s = getString(token);
 		if (s == null) { return null; }
 
@@ -98,13 +140,13 @@ public class EnumStringParser {
 		}
 	}
 
-	public String[] getStrings(Enum token, Enum delimiter) {
+	private String[] getStrings(Token token, Token delimiter) {
 		String list = match(token);
 		if (list == null) {	return null; }
 		if (list.isEmpty()) { return new String[]{}; }
 
 
-		String cut[] = list.split(extractValue(delimiter));
+		String cut[] = list.split(delimiter.value+"");
 		for (int i=0; i < cut.length; ++i) {
 			cut[i] = cut[i].trim();
 		}
@@ -112,7 +154,7 @@ public class EnumStringParser {
 		return cut;
 	}
 
-	public Integer[] getInts(Enum token, Enum delimiter) {
+	private Integer[] getInts(Token token, Token delimiter) throws ParseException {
 		String[] list = getStrings(token, delimiter);
 		if (list == null) {	return null; }
 
@@ -131,7 +173,7 @@ public class EnumStringParser {
 		return retval.toArray(new Integer[retval.size()]);
 	}
 
-	public Boolean[] getBooleans(Enum token, Enum delimiter) {
+	private Boolean[] getBooleans(Token token, Token delimiter) throws ParseException {
 		String[] list = getStrings(token, delimiter);
 		if (list == null) {	return null; }
 
@@ -150,7 +192,7 @@ public class EnumStringParser {
 		return retval.toArray(new Boolean[retval.size()]);
 	}
 
-	public Double[] getDoubles(Enum token, Enum delimiter) {
+	private Double[] getDoubles(Token token, Token delimiter) throws ParseException {
 		String[] list = getStrings(token, delimiter);
 		if (list == null) {	return null; }
 
@@ -169,59 +211,69 @@ public class EnumStringParser {
 		return retval.toArray(new Double[retval.size()]);
 	}
 
-	public void clearValueCache() {
-		valueCache.clear();
+	@SuppressWarnings("unchecked")
+	private Enum instantiate(String string) throws ParseException {
+		if (string.equals("null"))
+			return null;
+
+		int dot = string.lastIndexOf(".");
+
+		if (dot == -1  ||  dot+1 == string.length()) {
+			throw new ParseException("Invalid class string: " + string);
+		}
+
+		String front = string.substring(0, dot).trim();
+		String back = string.substring(dot+1).trim();
+		Enum e;
+
+		try {
+			Class c = Class.forName(front);
+			e = Enum.valueOf(c, back);
+		} catch (ClassNotFoundException ex) {
+			throw new ParseException("Invalid class string: " + front);
+		}
+
+		return e;
 	}
 
-	//-------------------------------------------------------------------------------------------//
+	private void eatWhiteSpace() {
+		while (true) {
+			char c = buffer.charAt(0);
 
-	private String match(Enum token) {
-		String value = extractValue(token);
+			if (Character.isWhitespace(c)) {
+				buffer.deleteCharAt(0);
+			} else {
+				return;
+			}
+		}
+	}
 
-		int index = buffer.indexOf(value);
+	private String match(Token token) {
+		int index = buffer.indexOf(token.value+"");
 		if (index == -1) {
 			return null;
 		}
 
 		String front = buffer.substring(0, index);
-		buffer.delete(0, index +value.length());
+		buffer.delete(0, index+1);
 		front = front.trim();
 
 		return front;
 	}
 
-	private String extractValue(Enum e) {
-		if (valueCache.containsKey(e)) {
-			return valueCache.get(e);
+	public enum Token {
+		SET_START('{'),
+		SET_END('}'),
+		DIVIDER('|'),
+		NAME_END(':'),
+		COMMA(',')
+
+		;
+
+		public final char value;
+
+		Token(char value) {
+			this.value = value;
 		}
-
-		Class clazz = e.getClass();
-		String retval;
-		Field field;
-
-		try {
-			field = clazz.getField(e.name());
-		} catch (NoSuchFieldException ex) {
-			throw new RuntimeException(ex);
-		}
-
-		Value name;
-		name = field.getAnnotation(Value.class);
-
-		if (name != null) {
-			retval = name.value();
-		} else {
-			retval = e.toString();
-		}
-
-		valueCache.put(e, retval);
-		return retval;
-	}
-
-
-	@Retention(RetentionPolicy.RUNTIME)
-	@Target(ElementType.FIELD)
-	public static @interface Value {
-		String value();
 	}
 }

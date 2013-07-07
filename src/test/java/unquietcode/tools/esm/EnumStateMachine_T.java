@@ -18,13 +18,13 @@ public class EnumStateMachine_T {
 
 	@Test
 	public void removeTransition() {
-		EnumStateMachine esm = getThreadLikeMachine();
+		EnumStateMachine<State> esm = getThreadLikeMachine();
 		esm.transition(State.Running);
 		esm.transition(State.Paused);
 
 		boolean modified = esm.removeTransitions(State.Running, State.Paused);
 		Assert.assertTrue("expected modification", modified);
-		Assert.assertEquals("expected reset", 0, esm.getTransitionCount());
+		Assert.assertEquals("expected reset", 0, esm.transitionCount());
 
 		esm.transition(State.Running);
 		boolean failed = false;
@@ -44,10 +44,10 @@ public class EnumStateMachine_T {
 //	}
 
 	@Test
-	public void stringParsingFromExistingMachine() {
-		EnumStateMachine esm1 = getThreadLikeMachine();
+	public void stringParsingFromExistingMachine() throws ParseException {
+		EnumStateMachine<State> esm1 = getThreadLikeMachine();
 		String one = esm1.toString();
-		EnumStateMachine esm2 = new EnumStateMachine(one);
+		EnumStateMachine<State> esm2 = EnumStringParser.getStateMachine(one);
 
 		Assert.assertTrue(esm1.equals(esm2));
 	}
@@ -64,7 +64,7 @@ public class EnumStateMachine_T {
 			}
 		};
 
-		EnumStateMachine esm = new EnumStateMachine(State.Ready);
+		EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);
 		esm.addTransitions(cb, State.Ready, State.Running);
 		esm.addTransitions(cb, State.Running, State.Stopped);
 
@@ -82,12 +82,12 @@ public class EnumStateMachine_T {
 
 		esm.transition(State.Running);
 		Assert.assertEquals("expected transitions", 1, transitioned.intValue());
-		Assert.assertEquals("expected transitions", 1, esm.getTransitionCount());
+		Assert.assertEquals("expected transitions", 1, esm.transitionCount());
 		Assert.assertEquals("expected one entrance marker", 1, entered.intValue());
 
 		esm.transition(State.Stopped);
 		Assert.assertEquals("expected transitions", 2, transitioned.intValue());
-		Assert.assertEquals("expected transitions", 2, esm.getTransitionCount());
+		Assert.assertEquals("expected transitions", 2, esm.transitionCount());
 		Assert.assertEquals("expected one entrance marker", 1, entered.intValue());
 		Assert.assertEquals("expected one exit marker", 1, entered.intValue());
 	}
@@ -102,7 +102,7 @@ public class EnumStateMachine_T {
 			}
 		};
 
-		EnumStateMachine esm = new EnumStateMachine(State.Ready);
+		EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);
 		esm.addTransitions(cb, State.Ready, State.Running);
 
 		esm.transition(State.Running);
@@ -119,7 +119,7 @@ public class EnumStateMachine_T {
 			}
 		};
 
-		EnumStateMachine esm = new EnumStateMachine(State.Ready);
+		EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);
 		esm.addTransitions(cb, State.Ready, State.Running);
 		esm.addTransitions(cb, State.Ready, State.Running);
 
@@ -137,7 +137,7 @@ public class EnumStateMachine_T {
 			}
 		};
 
-		EnumStateMachine esm = new EnumStateMachine(State.Ready);
+		EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);
 		esm.addTransitions(cb, State.Ready, State.Running);
 		esm.addTransitions(cb, State.Running, State.Stopped);
 
@@ -149,7 +149,7 @@ public class EnumStateMachine_T {
 
 	@Test(expected=TransitionException.class)
 	public void transitionFailedToSelf() {
-		EnumStateMachine esm = getThreadLikeMachine();
+		EnumStateMachine<State> esm = getThreadLikeMachine();
 
 		esm.transition(State.Running);
 		esm.transition(State.Paused);
@@ -158,7 +158,7 @@ public class EnumStateMachine_T {
 
 	@Test(expected=TransitionException.class)
 	public void transitionFailedToOther() {
-		EnumStateMachine esm = getThreadLikeMachine();
+		EnumStateMachine<State> esm = getThreadLikeMachine();
 
 		esm.transition(State.Running);
 		esm.transition(State.Paused);
@@ -167,8 +167,8 @@ public class EnumStateMachine_T {
 
 	// ---------- //
 
-	private EnumStateMachine getThreadLikeMachine() {
-		EnumStateMachine esm = new EnumStateMachine(State.Ready);
+	private EnumStateMachine<State> getThreadLikeMachine() {
+		EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);
 		esm.addTransitions(State.Ready, State.Running, State.Finished);
 		esm.addTransitions(State.Running, State.Paused, State.Stopping);
 		esm.addTransitions(State.Paused, State.Running, State.Stopping);
