@@ -30,9 +30,9 @@ import java.util.*;
  * @version 12-23-2010
  */
 public class StateMachine<T extends State> {
-	private Map<T, StateContainer<T>> states = new IdentityHashMap<T, StateContainer<T>>();
-	private StateContainer<T> initial;
-	private StateContainer<T> current;
+	private Map<State, StateContainer> states = new IdentityHashMap<State, StateContainer>();
+	private StateContainer initial;
+	private StateContainer current;
 	private long transitions = 0;
 
 	public StateMachine() {
@@ -54,7 +54,7 @@ public class StateMachine<T extends State> {
 	}
 
 	public synchronized boolean transition(T state) {
-		StateContainer<T> next = getState(state);
+		StateContainer next = getState(state);
 		if (!current.transitions.containsKey(next)) {
 			throw new TransitionException("No transition exists between "+ current +" and "+ next);
 		}
@@ -86,8 +86,9 @@ public class StateMachine<T extends State> {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	public synchronized T currentState() {
-		return current.state;
+		return (T) current.state;
 	}
 
 	/**
@@ -103,8 +104,9 @@ public class StateMachine<T extends State> {
 		return transitions;
 	}
 
+	@SuppressWarnings("unchecked")
 	public synchronized T initialState() {
-		return initial.state;
+		return (T) initial.state;
 	}
 
 	/**
@@ -121,7 +123,7 @@ public class StateMachine<T extends State> {
 	 * is entered, via any transition.
 	 */
 	public synchronized void onEntering(T state, StateMachineCallback callback) {
-		StateContainer<T> s = getState(state);
+		StateContainer s = getState(state);
 		s.entryActions.add(callback);
 	}
 
@@ -130,7 +132,7 @@ public class StateMachine<T extends State> {
 	 * is exited, via any transition.
 	 */
 	public synchronized void onExiting(T state, StateMachineCallback callback) {
-		StateContainer<T> s = getState(state);
+		StateContainer s = getState(state);
 		s.exitActions.add(callback);
 	}
 
@@ -186,12 +188,12 @@ public class StateMachine<T extends State> {
 	}
 
 	private boolean addTransitions(StateMachineCallback callback, boolean create, T fromState, T...toStates) {
-		Set<T> set = makeSet(toStates);
-		StateContainer<T> from = getState(fromState);
+		Set<State> set = makeSet(toStates);
+		StateContainer from = getState(fromState);
 		boolean modified = false;
 
-		for (T anEnum : set) {
-			StateContainer<T> to = getState(anEnum);
+		for (State state : set) {
+			StateContainer to = getState(state);
 			Transition transition = null;
 
 			if (from.transitions.containsKey(to)) {
@@ -221,12 +223,12 @@ public class StateMachine<T extends State> {
 	 * @return true if the transitions were modified, false otherwise
 	 */
 	public synchronized boolean removeTransitions(T fromState, T...toStates) {
-		Set<T> set = makeSet(toStates);
-		StateContainer<T> from = getState(fromState);
+		Set<State> set = makeSet(toStates);
+		StateContainer from = getState(fromState);
 		boolean modified = false;
 
-		for (T state : set) {
-			StateContainer<T> to = getState(state);
+		for (State state : set) {
+			StateContainer to = getState(state);
 			if (from.transitions.remove(to) != null) {
 				modified = true;
 			}
@@ -241,7 +243,7 @@ public class StateMachine<T extends State> {
 	}
 
 	public synchronized void setTransitions(StateMachineCallback callback, T fromState, T...toStates) {
-		StateContainer<T> state = getState(fromState);
+		StateContainer state = getState(fromState);
 		state.transitions.clear();
 		addTransitions(callback, fromState, toStates);
 	}
@@ -262,19 +264,22 @@ public class StateMachine<T extends State> {
 			return false;
 		}
 
-		StateMachine other = (StateMachine) o;
+		@SuppressWarnings("unchecked")
+		StateMachine<State> other = (StateMachine) o;
 
 		if (states.size() != other.states.size()) {
 			return false;
 		}
 
-		for (Map.Entry<T, StateContainer<T>> entry : states.entrySet()) {
-			if (!other.states.containsKey(entry.getKey())) {
+		for (Map.Entry<State, StateContainer> entry : states.entrySet()) {
+			State key = entry.getKey();
+
+			if (!other.states.containsKey(key)) {
 				return false;
 			}
 
-			StateContainer<T> tState = entry.getValue();
-			StateContainer oState = other.states.get(entry.getKey());
+			StateContainer tState = entry.getValue();
+			StateContainer oState = other.states.get(key);
 
 			if (tState.transitions.size() != oState.transitions.size()) {
 				return false;
@@ -315,11 +320,11 @@ public class StateMachine<T extends State> {
 		}
 
 		int i = 1;
-		for (Map.Entry<T, StateContainer<T>> entry : states.entrySet()) {
+		for (Map.Entry<State, StateContainer> entry : states.entrySet()) {
 			sb.append("\t").append(fullString(entry.getKey())).append(" : {");
 
 			int j = 1;
-			for (Transition<T> t : entry.getValue().transitions.values()) {
+			for (Transition t : entry.getValue().transitions.values()) {
 				sb.append(fullString(t.next.state));
 
 				if (j++ != entry.getValue().transitions.size()) {
@@ -336,8 +341,8 @@ public class StateMachine<T extends State> {
 		return sb.toString();
 	}
 
-	private Set<T> makeSet(T states[]) {
-		Set<T> set = new HashSet<T>();
+	private Set<State> makeSet(State states[]) {
+		Set<State> set = new HashSet<State>();
 
 		if (states == null) {
 			set.add(null);
@@ -348,23 +353,23 @@ public class StateMachine<T extends State> {
 		return set;
 	}
 
-	private StateContainer<T> getState(T token) {
+	private StateContainer getState(State token) {
 		if (states.containsKey(token)) {
 			return states.get(token);
 		}
 
-		StateContainer<T> s = new StateContainer<T>(token);
+		StateContainer s = new StateContainer(token);
 		states.put(token, s);
 		return s;
 	}
 
-	private static class StateContainer<T extends State> {
-		final T state;
-		final Map<StateContainer<T>, Transition<T>> transitions = new HashMap<StateContainer<T>, Transition<T>>();
+	private static class StateContainer {
+		final State state;
+		final Map<StateContainer, Transition> transitions = new HashMap<StateContainer, Transition>();
 		final Set<StateMachineCallback> entryActions = new HashSet<StateMachineCallback>();
 		final Set<StateMachineCallback> exitActions = new HashSet<StateMachineCallback>();
 
-		StateContainer(T state) {
+		StateContainer(State state) {
 			this.state = state;
 		}
 
@@ -380,11 +385,11 @@ public class StateMachine<T extends State> {
 		}
 	}
 
-	private static class Transition<T extends State> {
-		final StateContainer<T> next;
+	private static class Transition {
+		final StateContainer next;
 		final Set<StateMachineCallback> callbacks = new HashSet<StateMachineCallback>();
 
-		Transition(StateContainer<T> next) {
+		Transition(StateContainer next) {
 			this.next = next;
 		}
 
@@ -400,7 +405,7 @@ public class StateMachine<T extends State> {
 //		}
 	}
 
-	private String fullString(T e) {
-		return e != null ? e.getClass().getName() + "." + e.toString() : null;
+	private String fullString(State state) {
+		return state != null ? state.getClass().getName() + "." + state.toString() : null;
 	}
 }

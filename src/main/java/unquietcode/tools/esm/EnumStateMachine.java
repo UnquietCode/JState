@@ -1,5 +1,5 @@
 /*******************************************************************************
- Copyright 2011 Benjamin Fagin
+ Copyright 2013 Benjamin Fagin
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,211 +19,53 @@
 
 package unquietcode.tools.esm;
 
-import unquietcode.tools.esm.EnumStringParser.Value;
 
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.List;
 
 /**
+ * A state machine which runs on enums. Note that null is a valid state
+ * in this system. The initial starting point is null by default.
+ *
  * @author  Benjamin Fagin
  * @version 12-23-2010
- *
- * Null is a valid state in this system. The initial starting point is null by default.
  */
-public class EnumStateMachine {
-	private Map<Enum, State> states = new HashMap<Enum, State>();
-	private State initial;
-	private State current;
-	int transitions;
-
+public class EnumStateMachine<T extends Enum<T>> extends StateMachine<EnumStateMachine.EnumWrapper<T>> {
 
 	public EnumStateMachine() {
-		initial = null;
-		current = initial;
-		transitions = 0;
+		this(null);
 	}
 
-	public EnumStateMachine(Enum initial) {
-		this.initial = getState(initial);
-		current = this.initial;
-		transitions = 0;
+	public EnumStateMachine(T initial) {
+		super(new EnumWrapper<T>(initial));
 	}
 
-	public EnumStateMachine(String configuration) throws ParseException {
-		configureByString(configuration);
-	}
+	static class EnumWrapper<T extends Enum<T>> implements State {
+		public final T value;
 
-	/**
-	 * Resets the state machine to its initial state and clears the transition count.
-	 */
-	public synchronized void reset() {
-		transitions = 0;
-		current = initial;
-	}
-
-	public synchronized boolean transition(Enum state) {
-		State next = getState(state);
-		if (!current.transitions.containsKey(next)) {
-			throw new TransitionException("No transition exists between "+ current +" and "+ next);
+		public static <T extends Enum<T>> EnumWrapper<T> $(T value) {
+			return new EnumWrapper<T>(value);
 		}
 
-		// exit callbacks
-		for (StateMachineCallback exitAction : current.exitActions) {
-			exitAction.performAction();
+		EnumWrapper(T value) {
+			this.value = value;
 		}
 
-		// transition callbacks
-		Transition transition = current.transitions.get(next);
-		for (StateMachineCallback callback : transition.callbacks) {
-			callback.performAction();
+		@Override
+		public String name() {
+			return value != null ? value.name() : "null";
 		}
 
-		// entry callbacks
-		for (StateMachineCallback entryAction : next.entryActions) {
-			entryAction.performAction();
-		}
+		@Override
+		public boolean equals(Object obj) {
+			EnumWrapper other = (EnumWrapper) obj;
 
-		// officially finish the transition
-		transitions += 1;
-
-		if (current == next) {
-			return false;
-		} else {
-			current = next;
-			return true;
-		}
-	}
-
-	public synchronized Enum currentState() {
-		return current.theEnum;
-	}
-
-	/**
-	 * Get the total number of transitions performed by the state machine, since
-	 * construction or the most recent call to {@link #reset()}. Transitions which
-	 * are in progress do not count towards the overall count. In progress means
-	 * that the exit callbacks, transition callbacks, and entry callbacks have all
-	 * been completed for a given transition.
-	 *
-	 * @return the current number of transitions performed
-	 */
-	public synchronized int getTransitionCount() {
-		return transitions;
-	}
-
-	public synchronized Enum initialState() {
-		return initial.theEnum;
-	}
-
-	/**
-	 * Will not reset, just sets the initial state.
-	 *
-	 * @param state initial state to be set after next reset
-	 */
-	public synchronized void setInitialState(Enum state) {
-		initial = getState(state);
-	}
-
-	/**
-	 * Add a transition between two states.
-	 * @param fromState the initial state
-	 * @param toStates one or more states to move to
-	 */
-	public synchronized void addTransitions(Enum fromState, Enum...toStates) {
-		addTransitions(null, fromState, toStates);
-	}
-
-	/**
-	 * Adds a callback which will be executed whenever the specified state
-	 * is entered, via any transition.
-	 */
-	public synchronized void onEntering(Enum state, StateMachineCallback callback) {
-		State s = getState(state);
-		s.entryActions.add(callback);
-	}
-
-	/**
-	 * Adds a callback which will be executed whenever the specified state
-	 * is exited, via any transition.
-	 */
-	public synchronized void onExiting(Enum state, StateMachineCallback callback) {
-		State s = getState(state);
-		s.exitActions.add(callback);
-	}
-
-	/**
-	 * Add a transition from one state to 0..n other states. The callback
-	 * will be executed as the transition is occurring. If the state machine
-	 * is modified during this operation, it will be reset. Adding a new
-	 * callback to an exising transition will not be perceived as modification.
-	 *
-	 * @param callback callback, can be null
-	 * @param fromState state moving from
-	 * @param toStates states moving to
-	 * @return true if the state machine was modified and a reset occurred, false otherwise
-	 */
-	public synchronized boolean addTransitions(StateMachineCallback callback, Enum fromState, Enum...toStates) {
-		Set<Enum> set = makeSet(toStates);
-		State from = getState(fromState);
-		boolean modified = false;
-
-		for (Enum anEnum : set) {
-			State to = getState(anEnum);
-			Transition transition;
-
-			if (from.transitions.containsKey(to)) {
-				transition = from.transitions.get(to);
+			if (value == null) {
+				return other == null;
 			} else {
-				transition = new Transition(to);
-				from.transitions.put(to, transition);
-				modified = true;
-			}
-
-			if (callback != null) {
-				transition.callbacks.add(callback);
+				return value.name().equals(other.name());
 			}
 		}
-
-		if (modified) {
-			reset();
-		}
-
-		return modified;
-	}
-
-	/**
-	 * Removes the set of transitions from the given state.
-	 * When the state machine is modified, this method will
-	 * return true and the state machine will be reset.
-	 *
-	 * @param fromState from state
-	 * @param toStates to states
-	 * @return true if the transitions were modified, false otherwise
-	 */
-	public synchronized boolean removeTransitions(Enum fromState, Enum...toStates) {
-		Set<Enum> set = makeSet(toStates);
-		State from = getState(fromState);
-		boolean modified = false;
-
-		for (Enum anEnum : set) {
-			State to = getState(anEnum);
-			if (from.transitions.remove(to) != null) {
-				modified = true;
-			}
-		}
-
-		if (modified) { reset(); }
-		return modified;
-	}
-
-	public synchronized void setTransitions(Enum fromState, Enum...toStates) {
-		setTransitions(null, fromState, toStates);
-	}
-
-	public synchronized void setTransitions(StateMachineCallback callback, Enum fromState, Enum...toStates) {
-		State state = getState(fromState);
-		state.transitions.clear();
-		addTransitions(callback, fromState, toStates);
 	}
 
 	/**
@@ -233,293 +75,58 @@ public class EnumStateMachine {
 	 * @param clazz         The class of the enum to add.
 	 * @param includeSelf   True if enums are allowed to transition to themselves.
 	 */
-	public synchronized void addAll(Class clazz, boolean includeSelf) {
+	@SuppressWarnings("unchecked")
+	public synchronized void addAll(Class<T> clazz, boolean includeSelf) {
 		if (clazz == null || !clazz.isEnum()) {
 			throw new IllegalArgumentException("A valid enum class must be provided.");
 		}
 
-		Enum[] full = (Enum[]) clazz.getEnumConstants();
+		// wrap enums
+		List<EnumWrapper<T>> full = new ArrayList<EnumWrapper<T>>();
 
-		if (includeSelf) {
-			for (Enum e : full) {
-				addTransitions(e, full);
-			}
-		} else {
-			for (Enum e : full) {
-				addTransitions(e, full);
-
-				State self = getState(e);
-				self.transitions.remove(self);
-			}
-		}
-	}
-
-	/**
-	 * Two state machines are considered equal if they both have the
-	 * same number of states, and the same number of transitions.
-	 *
-	 * The transition actions (entry, exit, and transition callbacks) do
-	 * not count towards equality.
-	 *
-	 * Overall, this is not the fastest method and should be used
-	 * lightly.
-	 */
-	@Override
-	public boolean equals(Object o) {
-		if (o.getClass() != this.getClass()) {
-			return false;
+		for (T t : clazz.getEnumConstants()) {
+			full.add(new EnumWrapper<T>(t));
 		}
 
-		EnumStateMachine other = (EnumStateMachine) o;
+		for (EnumWrapper<T> wrapped : full) {
+			List<EnumWrapper<T>> _toStates;
 
-		if (states.size() != other.states.size()) {
-			return false;
-		}
-
-		for (Map.Entry<Enum, State> entry : states.entrySet()) {
-			if (!other.states.containsKey(entry.getKey())) {
-				return false;
-			}
-
-			State tState = entry.getValue();
-			State oState = other.states.get(entry.getKey());
-
-			if (tState.transitions.size() != oState.transitions.size()) {
-				return false;
-			}
-
-			for (State s : tState.transitions.keySet()) {
-				boolean found = false;
-
-				for (State os : oState.transitions.keySet()) {
-					if (s.theEnum == null) {
-						if (os.theEnum == null) {
-							found = true;
-							break;
-						}
-					} else {
-						if (s.theEnum.equals(os.theEnum)) {
-							found = true;
-							break;
-						}
-					}
-				}
-
-				if (!found) {
-					return false;
-				}
-			}
-		}
-
-		return true;
-	}
-
-	@Override
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-
-		if (initial != null) {
-			sb.append(fullString(initial.theEnum)).append(" | \n");
-		}
-
-		int i = 1;
-		for (Map.Entry<Enum, State> entry : states.entrySet()) {
-			sb.append("\t").append(fullString(entry.getKey())).append(" : {");
-
-			int j = 1;
-			for (Transition t : entry.getValue().transitions.values()) {
-				sb.append(fullString(t.next.theEnum));
-
-				if (j++ != entry.getValue().transitions.size()) {
-					sb.append(", ");
-				}
-			}
-
-			sb.append("}");
-
-			if (i++ != states.size())
-				sb.append(" | \n");
-		}
-
-		return sb.toString();
-	}
-
-	private Set<Enum> makeSet(Enum states[]) {
-		Set<Enum> set = new HashSet<Enum>();
-
-		if (states == null) {
-			set.add(null);
-		} else {
-			set.addAll(Arrays.asList(states));
-		}
-
-		return set;
-	}
-
-	private State getState(Enum token) {
-		if (states.containsKey(token)) {
-			return states.get(token);
-		}
-
-		State s = new State(token);
-		states.put(token, s);
-		return s;
-	}
-
-	private static class State {
-		final Enum theEnum;
-		final Map<State, Transition> transitions = new HashMap<State, Transition>();
-		final Set<StateMachineCallback> entryActions = new HashSet<StateMachineCallback>();
-		final Set<StateMachineCallback> exitActions = new HashSet<StateMachineCallback>();
-
-		State(Enum theEnum) {
-			this.theEnum = theEnum;
-		}
-
-		public @Override boolean equals(Object obj) {
-			if (!(obj instanceof State)) { return false; }
-			State other = (State) obj;
-
-			if (this.theEnum == null) {
-				return other.theEnum == null;
+			if (includeSelf) {
+				_toStates = full;
 			} else {
-				return this.theEnum.equals(other.theEnum);
+				_toStates = new ArrayList<EnumWrapper<T>>(full);
+				_toStates.remove(wrapped);
 			}
+
+			EnumWrapper[] toStates = _toStates.toArray(new EnumWrapper[full.size()]);
+			addTransitions(wrapped, toStates);
 		}
 	}
 
-	private static class Transition {
-		final State next;
-		final Set<StateMachineCallback> callbacks = new HashSet<StateMachineCallback>();
-
-		Transition(State next) {
-			this.next = next;
-		}
-
-//		public @Override boolean equals(Object obj) {
-//			if (!(obj instanceof Transition)) { return false; }
-//			Transition other = (Transition) obj;
-//
-//			if (this.next.theEnum == null) {
-//				return other.next.theEnum == null;
-//			} else {
-//				return this.next.theEnum.equals(other.next.theEnum);
-//			}
-//		}
+	public synchronized boolean addTransition(T fromState, T toState) {
+		return super.addTransition(EnumWrapper.$(fromState), EnumWrapper.$(toState));
 	}
 
-	//==o==o==o==o==o==o==| String Configuration |==o==o==o==o==o==o==//
-
-	enum Token {
-		@Value("{")
-		SET_START,
-
-		@Value("}")
-		SET_END,
-
-		@Value("|")
-		DIVIDER,
-
-		@Value(":")
-		NAME_END,
-
-		@Value(",")
-		COMMA
-	}
-
-	/**
-	 * Basic form is:
-	 * "state1 : {transition1, transition2}, state2 : {transition3, transition4}, state3 : {}"
-	 *
-	 * Listing empty sets is optional. Can also add the initial state to the front like so:
-	 * "initial | state1 : {transition1, transition2} | state2 : {transition3, transition4}"
-	 *
-	 * The states are the class strings of the enums being used. They will be processed via reflection.
-	 * The existing information is preserved; create a new state machine instead to avoid that.
-	 * When the operation is complete, the state machine is reset.
-	 *
-	 * @param   string   configuration string
-	 * @throws  ParseException  if the configuration string is malformed
-	 */
-	public synchronized void configureByString(String string) throws ParseException {
-		EnumStringParser parser = new EnumStringParser(string.trim());
-
-		String initialString = parser.getString(Token.DIVIDER);
-		if (initialString != null) {
-			initial = getState(instantiate(initialString));
-		}
-
-		while (!parser.isEmpty()) {
-			String name = parser.getString(Token.NAME_END);
-			parser.chomp(Token.SET_START);
-			String elements[] = parser.getStrings(Token.SET_END, Token.COMMA);
-			parser.chomp(Token.DIVIDER);
-
-			if (name == null || elements == null) {
-				throw new ParseException("Malformed configuration string.");
-			}
-
-			State state = getState(instantiate(name));
-
-			for (String e : elements) {
-				State next = getState(instantiate(e));
-
-				if (!state.transitions.containsKey(next)) {
-					Transition t = new Transition(next);
-					state.transitions.put(next, t);
-				}
-			}
-		}
-
-		reset();
+	public synchronized boolean addTransition(T fromState, T toState, StateMachineCallback callback) {
+		return super.addTransition(EnumWrapper.$(fromState), EnumWrapper.$(toState), callback);
 	}
 
 	@SuppressWarnings("unchecked")
-	private Enum instantiate(String string) throws ParseException {
-		if (string.equals("null"))
-			return null;
+	public synchronized boolean addTransitions(StateMachineCallback callback, T fromState, T...toStates) {
+		EnumWrapper[] wrapped = new EnumWrapper[toStates.length];
 
-		int dot = string.lastIndexOf(".");
-
-		if (dot == -1  ||  dot+1 == string.length()) {
-			throw new ParseException("Invalid class string: " + string);
+		for (int i = 0; i < toStates.length; i++) {
+			wrapped[i] = EnumWrapper.$(toStates[i]);
 		}
 
-		String front = string.substring(0, dot).trim();
-		String back = string.substring(dot+1).trim();
-		Enum e;
-
-		try {
-			Class c = Class.forName(front);
-			e = Enum.valueOf(c, back);
-		} catch (ClassNotFoundException ex) {
-			throw new ParseException("Invalid class string: " + front);
-		}
-
-		return e;
+		return super.addTransitions(callback, EnumWrapper.$(fromState), wrapped);
 	}
 
-	private String fullString(Enum e) {
-		if (e == null)
-			return null;
+	public synchronized boolean addTransitions(T fromState, T...toStates) {
+		return addTransitions(null, fromState, toStates);
+	}
 
-		return e.getClass().getName() + "." + e.toString();
+	public synchronized boolean addTransitions(T fromState, T[] toStates, StateMachineCallback callback) {
+		return addTransitions(callback, fromState, toStates);
 	}
 }
-
-
-
-
-
-//TODO some kind of listener system that allows the user to respond to transitions
-/*
-	something like
-		addListener(Enum state1, Enum state2, Listener listener)
-
-	then, whenever a transition from state1 to state2 occurs, the lister will be notified with
-	some sort of event.
-
-	So either use the built-in property-change listener system, or make a new system.
-	(better to just work with the existing stuff). Could use the weaklistener wrapepr from
-	PaperTrail to prevent lapsed listeners.
-*/
