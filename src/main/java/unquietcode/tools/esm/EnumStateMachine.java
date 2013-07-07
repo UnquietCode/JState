@@ -30,42 +30,15 @@ import java.util.List;
  * @author  Benjamin Fagin
  * @version 12-23-2010
  */
-public class EnumStateMachine<T extends Enum<T>> extends StateMachine<EnumStateMachine.EnumWrapper<T>> {
+public class EnumStateMachine<T extends Enum<T>> implements IStateMachine<T> {
+	private final StateMachine<EnumWrapper<T>> proxy = new StateMachine<EnumWrapper<T>>();
 
 	public EnumStateMachine() {
 		this(null);
 	}
 
 	public EnumStateMachine(T initial) {
-		super(new EnumWrapper<T>(initial));
-	}
-
-	static class EnumWrapper<T extends Enum<T>> implements State {
-		public final T value;
-
-		public static <T extends Enum<T>> EnumWrapper<T> $(T value) {
-			return new EnumWrapper<T>(value);
-		}
-
-		EnumWrapper(T value) {
-			this.value = value;
-		}
-
-		@Override
-		public String name() {
-			return value != null ? value.name() : "null";
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			EnumWrapper other = (EnumWrapper) obj;
-
-			if (value == null) {
-				return other == null;
-			} else {
-				return value.name().equals(other.name());
-			}
-		}
+		proxy.setInitialState(EnumWrapper.$(initial));
 	}
 
 	/**
@@ -99,34 +72,135 @@ public class EnumStateMachine<T extends Enum<T>> extends StateMachine<EnumStateM
 			}
 
 			EnumWrapper[] toStates = _toStates.toArray(new EnumWrapper[full.size()]);
-			addTransitions(wrapped, toStates);
+			proxy.addTransitions(wrapped, toStates);
 		}
 	}
 
+	//==o==o==o==o==o==o==| interface methods |==o==o==o==o==o==o==//
+
+	@Override
+	public T currentState() {
+		return proxy.currentState().value;
+	}
+
+	@Override
+	public synchronized void reset() {
+		proxy.reset();
+	}
+
+	@Override
+	public synchronized boolean transition(T state) {
+		return proxy.transition(EnumWrapper.$(state));
+	}
+
+	@Override
+	public long transitionCount() {
+		return proxy.transitionCount();
+	}
+
+	@Override
+	public T initialState() {
+		return proxy.initialState().value;
+	}
+
+	@Override
+	public synchronized void setInitialState(T state) {
+		proxy.setInitialState(EnumWrapper.$(state));
+	}
+
+	@Override
+	public void onEntering(T state, StateMachineCallback callback) {
+		proxy.onEntering(EnumWrapper.$(state), callback);
+	}
+
+	@Override
+	public void onExiting(T state, StateMachineCallback callback) {
+		proxy.onExiting(EnumWrapper.$(state), callback);
+	}
+
+	@Override
+	public void onTransition(T from, T to, StateMachineCallback callback) {
+		proxy.onTransition(EnumWrapper.$(from), EnumWrapper.$(to), callback);
+	}
+
+	@Override
+	public synchronized boolean removeTransitions(T fromState, T...toStates) {
+		return proxy.removeTransitions(EnumWrapper.$(fromState), wrap(toStates));
+	}
+
+	@Override
+	public synchronized void setTransitions(T fromState, T...toStates) {
+		proxy.setTransitions(EnumWrapper.$(fromState), wrap(toStates));
+	}
+
+	@Override
+	public synchronized void setTransitions(StateMachineCallback callback, T fromState, T...toStates) {
+		proxy.setTransitions(callback, EnumWrapper.$(fromState), wrap(toStates));
+	}
+
+	@Override
 	public synchronized boolean addTransition(T fromState, T toState) {
-		return super.addTransition(EnumWrapper.$(fromState), EnumWrapper.$(toState));
+		return proxy.addTransition(EnumWrapper.$(fromState), EnumWrapper.$(toState));
 	}
 
+	@Override
 	public synchronized boolean addTransition(T fromState, T toState, StateMachineCallback callback) {
-		return super.addTransition(EnumWrapper.$(fromState), EnumWrapper.$(toState), callback);
+		return proxy.addTransition(EnumWrapper.$(fromState), EnumWrapper.$(toState), callback);
 	}
 
-	@SuppressWarnings("unchecked")
+	@Override
 	public synchronized boolean addTransitions(StateMachineCallback callback, T fromState, T...toStates) {
-		EnumWrapper[] wrapped = new EnumWrapper[toStates.length];
-
-		for (int i = 0; i < toStates.length; i++) {
-			wrapped[i] = EnumWrapper.$(toStates[i]);
-		}
-
-		return super.addTransitions(callback, EnumWrapper.$(fromState), wrapped);
+		return proxy.addTransitions(callback, EnumWrapper.$(fromState), wrap(toStates));
 	}
 
+	@Override
 	public synchronized boolean addTransitions(T fromState, T...toStates) {
 		return addTransitions(null, fromState, toStates);
 	}
 
+	@Override
 	public synchronized boolean addTransitions(T fromState, T[] toStates, StateMachineCallback callback) {
 		return addTransitions(callback, fromState, toStates);
+	}
+
+	//---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---//
+
+	@SuppressWarnings("unchecked")
+	private EnumWrapper<T>[] wrap(T[] array) {
+		EnumWrapper[] wrapped = new EnumWrapper[array.length];
+
+		for (int i = 0; i < array.length; i++) {
+			wrapped[i] = EnumWrapper.$(array[i]);
+		}
+
+		return wrapped;
+	}
+
+	static class EnumWrapper<T extends Enum<T>> implements State {
+		public final T value;
+
+		public static <T extends Enum<T>> EnumWrapper<T> $(T value) {
+			return new EnumWrapper<T>(value);
+		}
+
+		EnumWrapper(T value) {
+			this.value = value;
+		}
+
+		@Override
+		public String name() {
+			return value != null ? value.name() : "null";
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			EnumWrapper other = (EnumWrapper) obj;
+
+			if (value == null) {
+				return other == null;
+			} else {
+				return value.name().equals(other.name());
+			}
+		}
 	}
 }

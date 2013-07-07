@@ -29,7 +29,7 @@ import java.util.*;
  * @author  Benjamin Fagin
  * @version 12-23-2010
  */
-public class StateMachine<T extends State> {
+public class StateMachine<T extends State> implements IStateMachine<T> {
 	private Map<State, StateContainer> states = new IdentityHashMap<State, StateContainer>();
 	private StateContainer initial;
 	private StateContainer current;
@@ -44,15 +44,13 @@ public class StateMachine<T extends State> {
 		current = this.initial;
 	}
 
-	/**
-	 * Resets the state machine to its initial state and clears
-	 * the transition count.
-	 */
+	@Override
 	public synchronized void reset() {
 		transitions = 0;
 		current = initial;
 	}
 
+	@Override
 	public synchronized boolean transition(T state) {
 		StateContainer next = getState(state);
 		if (!current.transitions.containsKey(next)) {
@@ -86,95 +84,64 @@ public class StateMachine<T extends State> {
 		}
 	}
 
+	@Override
 	@SuppressWarnings("unchecked")
 	public synchronized T currentState() {
 		return (T) current.state;
 	}
 
-	/**
-	 * Get the total number of transitions performed by the state machine, since
-	 * construction or the most recent call to {@link #reset()}. Transitions which
-	 * are in progress do not count towards the overall count. In progress means
-	 * that the exit callbacks, transition callbacks, and entry callbacks have all
-	 * been completed for a given transition.
-	 *
-	 * @return the current number of transitions performed
-	 */
+	@Override
 	public synchronized long transitionCount() {
 		return transitions;
 	}
 
+	@Override
 	@SuppressWarnings("unchecked")
 	public synchronized T initialState() {
 		return (T) initial.state;
 	}
 
-	/**
-	 * Will not reset, just sets the initial state.
-	 *
-	 * @param state initial state to be set after next reset
-	 */
+	@Override
 	public synchronized void setInitialState(T state) {
 		initial = getState(state);
 	}
 
-	/**
-	 * Adds a callback which will be executed whenever the specified state
-	 * is entered, via any transition.
-	 */
+	@Override
 	public synchronized void onEntering(T state, StateMachineCallback callback) {
 		StateContainer s = getState(state);
 		s.entryActions.add(callback);
 	}
 
-	/**
-	 * Adds a callback which will be executed whenever the specified state
-	 * is exited, via any transition.
-	 */
+	@Override
 	public synchronized void onExiting(T state, StateMachineCallback callback) {
 		StateContainer s = getState(state);
 		s.exitActions.add(callback);
 	}
 
-	/**
-	 * Adds a callback which will be executed whenever the specified state
-	 * is exited, via any transition.
-	 */
+	@Override
 	@SuppressWarnings("unchecked")
 	public synchronized void onTransition(T from, T to, StateMachineCallback callback) {
 		addTransitions(callback, false, from, to);
 	}
 
+	@Override
 	@SuppressWarnings("unchecked")
 	public synchronized boolean addTransition(T fromState, T toState) {
 		return addTransitions(null, true, fromState, toState);
 	}
 
+	@Override
 	@SuppressWarnings("unchecked")
 	public synchronized boolean addTransition(T fromState, T toState, StateMachineCallback callback) {
 		return addTransitions(callback, true, fromState, toState);
 	}
 
-	/**
-	 * Add a transition between two states.
-	 * @param fromState the initial state
-	 * @param toStates one or more states to move to
-	 */
-	public synchronized boolean addTransitions(T fromState, T...toStates) {
+	@Override
+	public synchronized boolean addTransitions(T fromState, T... toStates) {
 		return addTransitions(null, true, fromState, toStates);
 	}
 
-	/**
-	 * Add a transition from one state to 0..n other states. The callback
-	 * will be executed as the transition is occurring. If the state machine
-	 * is modified during this operation, it will be reset. Adding a new
-	 * callback to an existing transition will not be perceived as modification.
-	 *
-	 * @param callback callback, can be null
-	 * @param fromState state moving from
-	 * @param toStates states moving to
-	 * @return true if the state machine was modified and a reset occurred, false otherwise
-	 */
+	@Override
 	public synchronized boolean addTransitions(T fromState, T[] toStates, StateMachineCallback callback) {
 		return addTransitions(callback, true, fromState, toStates);
 	}
@@ -183,7 +150,8 @@ public class StateMachine<T extends State> {
 		Gets around the inability to create generic arrays by flipping the
 		callback parameter position, thus freeing up the vararg parameter.
 	 */
-	public synchronized boolean addTransitions(StateMachineCallback callback, T fromState, T...toStates) {
+	@Override
+	public synchronized boolean addTransitions(StateMachineCallback callback, T fromState, T... toStates) {
 		return addTransitions(callback, true, fromState, toStates);
 	}
 
@@ -213,16 +181,8 @@ public class StateMachine<T extends State> {
 		return modified;
 	}
 
-	/**
-	 * Removes the set of transitions from the given state.
-	 * When the state machine is modified, this method will
-	 * return true and the state machine will be reset.
-	 *
-	 * @param fromState from state
-	 * @param toStates to states
-	 * @return true if the transitions were modified, false otherwise
-	 */
-	public synchronized boolean removeTransitions(T fromState, T...toStates) {
+	@Override
+	public synchronized boolean removeTransitions(T fromState, T... toStates) {
 		Set<State> set = makeSet(toStates);
 		StateContainer from = getState(fromState);
 		boolean modified = false;
@@ -238,11 +198,13 @@ public class StateMachine<T extends State> {
 		return modified;
 	}
 
-	public synchronized void setTransitions(T fromState, T...toStates) {
+	@Override
+	public synchronized void setTransitions(T fromState, T... toStates) {
 		setTransitions(null, fromState, toStates);
 	}
 
-	public synchronized void setTransitions(StateMachineCallback callback, T fromState, T...toStates) {
+	@Override
+	public synchronized void setTransitions(StateMachineCallback callback, T fromState, T... toStates) {
 		StateContainer state = getState(fromState);
 		state.transitions.clear();
 		addTransitions(callback, fromState, toStates);
