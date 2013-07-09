@@ -7,17 +7,6 @@ package unquietcode.tools.esm;
 public interface IStateMachine<T> extends StateMachineController<T> {
 
 	/**
-	 * Get the total number of transitions performed by the state machine, since
-	 * construction or the most recent call to {@link #reset()}. Transitions which
-	 * are in progress do not count towards the overall count. In progress means
-	 * that the exit callbacks, transition callbacks, and entry callbacks have all
-	 * been completed for a given transition.
-	 *
-	 * @return the current number of transitions performed
-	 */
-	long transitionCount();
-
-	/**
 	 * Will not reset, just sets the initial state.
 	 *
 	 * @param state initial state to be set after next reset
@@ -71,6 +60,9 @@ public interface IStateMachine<T> extends StateMachineController<T> {
 	 */
 	boolean addTransitions(StateMachineCallback callback, T fromState, T...toStates);
 
+	void setTransitions(T fromState, T... toStates);
+	void setTransitions(StateMachineCallback callback, T fromState, T... toStates);
+
 	/**
 	 * Removes the set of transitions from the given state.
 	 * When the state machine is modified, this method will
@@ -81,7 +73,4 @@ public interface IStateMachine<T> extends StateMachineController<T> {
 	 * @return true if the transitions were modified, false otherwise
 	 */
 	boolean removeTransitions(T fromState, T... toStates);
-
-	void setTransitions(T fromState, T... toStates);
-	void setTransitions(StateMachineCallback callback, T fromState, T... toStates);
 }

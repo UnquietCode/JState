@@ -10,6 +10,17 @@ package unquietcode.tools.esm;
 public interface StateMachineController<T> {
 
 	/**
+	 * Get the total number of transitions performed by the state machine, since
+	 * construction or the most recent call to {@link #reset()}. Transitions which
+	 * are in progress do not count towards the overall count. In progress means
+	 * that the exit callbacks, transition callbacks, and entry callbacks have all
+	 * been completed for a given transition.
+	 *
+	 * @return the current number of transitions performed
+	 */
+	long transitionCount();
+
+	/**
 	 * Transition the state machine to the next state.
 	 *
 	 * @param state to transition to
