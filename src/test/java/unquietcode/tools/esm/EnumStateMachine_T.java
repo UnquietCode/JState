@@ -1,6 +1,7 @@
 package unquietcode.tools.esm;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,6 +44,7 @@ public class EnumStateMachine_T {
 		// TODO
 //	}
 
+	@Ignore
 	@Test
 	public void stringParsingFromExistingMachine() throws ParseException {
 		EnumStateMachine<State> esm1 = getThreadLikeMachine();

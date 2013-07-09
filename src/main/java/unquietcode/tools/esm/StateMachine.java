@@ -29,8 +29,9 @@ import java.util.*;
  * @author  Benjamin Fagin
  * @version 12-23-2010
  */
-public class StateMachine<T extends State> implements IStateMachine<T> {
-	private Map<State, StateContainer> states = new IdentityHashMap<State, StateContainer>();
+public class StateMachine<T extends State> implements IStateMachine<T>, RoutableStateMachine<T> {
+	private final Map<State, StateContainer> states = new HashMap<State, StateContainer>();
+	private final List<StateRouter<T>> routers = new ArrayList<StateRouter<T>>();
 	private StateContainer initial;
 	private StateContainer current;
 	private long transitions = 0;
@@ -51,10 +52,37 @@ public class StateMachine<T extends State> implements IStateMachine<T> {
 	}
 
 	@Override
-	public synchronized boolean transition(T state) {
-		StateContainer next = getState(state);
-		if (!current.transitions.containsKey(next)) {
-			throw new TransitionException("No transition exists between "+ current +" and "+ next);
+	@SuppressWarnings("unchecked")
+	public synchronized boolean transition(T next) {
+		final StateContainer requestedState = getState(next);
+
+		if (!current.transitions.containsKey(requestedState)) {
+			throw new TransitionException("No transition exists between "+ current.state +" and "+ next);
+		}
+
+		StateContainer nextState = null;
+
+		// routing
+		for (StateRouter<T> router : routers) {
+			T decision = router.route((T) current.state, next);
+
+			if (decision != null) {
+
+				// if it's the same, bypass lookup
+				if (decision == next) {
+					nextState = requestedState;
+				}
+
+				// otherwise lookup the new state
+				else {
+					nextState = getState(decision);
+				}
+			}
+		}
+
+		// default to the originally requested state
+		if (nextState == null) {
+			nextState = requestedState;
 		}
 
 		// exit callbacks
@@ -63,23 +91,23 @@ public class StateMachine<T extends State> implements IStateMachine<T> {
 		}
 
 		// transition callbacks
-		Transition transition = current.transitions.get(next);
+		Transition transition = current.transitions.get(nextState);
 		for (StateMachineCallback callback : transition.callbacks) {
 			callback.performAction();
 		}
 
 		// entry callbacks
-		for (StateMachineCallback entryAction : next.entryActions) {
+		for (StateMachineCallback entryAction : nextState.entryActions) {
 			entryAction.performAction();
 		}
 
 		// officially finish the transition
 		transitions += 1;
 
-		if (current == next) {
+		if (current == nextState) {
 			return false;
 		} else {
-			current = next;
+			current = nextState;
 			return true;
 		}
 	}
@@ -107,11 +135,11 @@ public class StateMachine<T extends State> implements IStateMachine<T> {
 	}
 
 	@Override
-	public synchronized CallbackRegistration onEntering(T state, final StateMachineCallback callback) {
+	public synchronized HandlerRegistration onEntering(T state, final StateMachineCallback callback) {
 		final StateContainer s = getState(state);
 		s.entryActions.add(callback);
 
-		return new CallbackRegistration() {
+		return new HandlerRegistration() {
 			public void unregister() {
 				s.entryActions.remove(callback);
 			}
@@ -119,11 +147,11 @@ public class StateMachine<T extends State> implements IStateMachine<T> {
 	}
 
 	@Override
-	public synchronized CallbackRegistration onExiting(T state, final StateMachineCallback callback) {
+	public synchronized HandlerRegistration onExiting(T state, final StateMachineCallback callback) {
 		final StateContainer s = getState(state);
 		s.exitActions.add(callback);
 
-		return new CallbackRegistration() {
+		return new HandlerRegistration() {
 			public void unregister() {
 				s.exitActions.remove(callback);
 			}
@@ -132,14 +160,74 @@ public class StateMachine<T extends State> implements IStateMachine<T> {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public synchronized CallbackRegistration onTransition(final T from, final T to, final StateMachineCallback callback) {
+	public synchronized HandlerRegistration onTransition(final T from, final T to, final StateMachineCallback callback) {
 		addTransitions(callback, false, from, to);
 
-		return new CallbackRegistration() {
+		return new HandlerRegistration() {
 			public void unregister() {
 				removeCallback(callback, from, to);
 			}
 		};
+	}
+
+	@Override
+	public HandlerRegistration routeOnTransition(final StateRouter<T> router) {
+		if (router == null) {
+			throw new IllegalArgumentException("router cannot be null");
+		}
+
+		routers.add(router);
+
+		return new HandlerRegistration() {
+			public void unregister() {
+				routers.remove(router);
+			}
+		};
+	}
+
+	@Override
+	public HandlerRegistration routeOnTransition(final T from, final T to, final StateRouter<T> router) {
+		return routeOnTransition(new StateRouter<T>() {
+			public T route(T current, T next) {
+
+				// only route if it matches the pattern
+				if (current == from && next == to) {
+					return router.route(current, next);
+				} else {
+					return null;
+				}
+			}
+		});
+	}
+
+	@Override
+	public HandlerRegistration routeBeforeEntering(final T to, final StateRouter<T> router) {
+		return routeOnTransition(new StateRouter<T>() {
+			public T route(T current, T next) {
+
+				// only route if it matches the pattern
+				if (next == to) {
+					return router.route(current, next);
+				} else {
+					return null;
+				}
+			}
+		});
+	}
+
+	@Override
+	public HandlerRegistration routeAfterExiting(final T from, final StateRouter<T> router) {
+		return routeOnTransition(new StateRouter<T>() {
+			public T route(T current, T next) {
+
+				// only route if it matches the pattern
+				if (current == from) {
+					return router.route(current, next);
+				} else {
+					return null;
+				}
+			}
+		});
 	}
 
 	@Override

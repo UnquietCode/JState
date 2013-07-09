@@ -28,19 +28,19 @@ public interface IStateMachine<T> extends StateMachineController<T> {
 	 * Adds a callback which will be executed whenever the specified state
 	 * is entered, via any transition.
 	 */
-	CallbackRegistration onEntering(T state, StateMachineCallback callback);
+	HandlerRegistration onEntering(T state, StateMachineCallback callback);
 
 	/**
 	 * Adds a callback which will be executed whenever the specified state
 	 * is exited, via any transition.
 	 */
-	CallbackRegistration onExiting(T state, StateMachineCallback callback);
+	HandlerRegistration onExiting(T state, StateMachineCallback callback);
 
 	/**
 	 * Adds a callback which will be executed whenever the specified state
 	 * is exited, via any transition.
 	 */
-	CallbackRegistration onTransition(T from, T to, StateMachineCallback callback);
+	HandlerRegistration onTransition(T from, T to, StateMachineCallback callback);
 
 	boolean addTransition(T fromState, T toState);
 	boolean addTransition(T fromState, T toState, StateMachineCallback callback);

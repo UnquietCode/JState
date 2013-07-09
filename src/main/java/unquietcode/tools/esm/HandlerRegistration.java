@@ -8,6 +8,6 @@ package unquietcode.tools.esm;
  * @author Ben Fagin
  * @version 2013-07-07
  */
-public interface CallbackRegistration {
+public interface HandlerRegistration {
 	void unregister();
 }

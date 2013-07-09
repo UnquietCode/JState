@@ -22,6 +22,8 @@ package unquietcode.tools.esm;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * A state machine which runs on enums. Note that null is a valid state
@@ -30,7 +32,7 @@ import java.util.List;
  * @author  Benjamin Fagin
  * @version 12-23-2010
  */
-public class EnumStateMachine<T extends Enum<T>> implements IStateMachine<T> {
+public class EnumStateMachine<T extends Enum<T>> implements IStateMachine<T>, RoutableStateMachine<T> {
 	private final StateMachine<EnumWrapper<T>> proxy = new StateMachine<EnumWrapper<T>>();
 
 	public EnumStateMachine() {
@@ -58,7 +60,7 @@ public class EnumStateMachine<T extends Enum<T>> implements IStateMachine<T> {
 		List<EnumWrapper<T>> full = new ArrayList<EnumWrapper<T>>();
 
 		for (T t : clazz.getEnumConstants()) {
-			full.add(new EnumWrapper<T>(t));
+			full.add(EnumWrapper.$(t));
 		}
 
 		for (EnumWrapper<T> wrapped : full) {
@@ -109,18 +111,38 @@ public class EnumStateMachine<T extends Enum<T>> implements IStateMachine<T> {
 	}
 
 	@Override
-	public CallbackRegistration onEntering(T state, StateMachineCallback callback) {
+	public HandlerRegistration onEntering(T state, StateMachineCallback callback) {
 		return proxy.onEntering(EnumWrapper.$(state), callback);
 	}
 
 	@Override
-	public CallbackRegistration onExiting(T state, StateMachineCallback callback) {
+	public HandlerRegistration onExiting(T state, StateMachineCallback callback) {
 		return proxy.onExiting(EnumWrapper.$(state), callback);
 	}
 
 	@Override
-	public CallbackRegistration onTransition(T from, T to, StateMachineCallback callback) {
+	public HandlerRegistration onTransition(T from, T to, StateMachineCallback callback) {
 		return proxy.onTransition(EnumWrapper.$(from), EnumWrapper.$(to), callback);
+	}
+
+	@Override
+	public HandlerRegistration routeOnTransition(StateRouter<T> router) {
+		return proxy.routeOnTransition(new RouterWrapper(router));
+	}
+
+	@Override
+	public HandlerRegistration routeOnTransition(T from, T to, StateRouter<T> router) {
+		return proxy.routeOnTransition(EnumWrapper.$(from), EnumWrapper.$(to), new RouterWrapper(router));
+	}
+
+	@Override
+	public HandlerRegistration routeBeforeEntering(T to, StateRouter<T> router) {
+		return proxy.routeBeforeEntering(EnumWrapper.$(to), new RouterWrapper(router));
+	}
+
+	@Override
+	public HandlerRegistration routeAfterExiting(T from, StateRouter<T> router) {
+		return proxy.routeAfterExiting(EnumWrapper.$(from), new RouterWrapper(router));
 	}
 
 	@Override
@@ -163,6 +185,11 @@ public class EnumStateMachine<T extends Enum<T>> implements IStateMachine<T> {
 		return addTransitions(callback, fromState, toStates);
 	}
 
+	@Override
+	public String toString() {
+		return proxy.toString();
+	}
+
 	//---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---//
 
 	@SuppressWarnings("unchecked")
@@ -176,14 +203,42 @@ public class EnumStateMachine<T extends Enum<T>> implements IStateMachine<T> {
 		return wrapped;
 	}
 
-	static class EnumWrapper<T extends Enum<T>> implements State {
-		public final T value;
+	private class RouterWrapper implements StateRouter<EnumWrapper<T>> {
+		private final StateRouter<T> proxy;
 
-		public static <T extends Enum<T>> EnumWrapper<T> $(T value) {
-			return new EnumWrapper<T>(value);
+		RouterWrapper(StateRouter<T> proxy) {
+			this.proxy = proxy;
 		}
 
-		EnumWrapper(T value) {
+		@Override
+		public EnumWrapper<T> route(EnumWrapper<T> current, EnumWrapper<T> next) {
+			T decision = proxy.route(current.value, next.value);
+			return EnumWrapper.$(decision);
+		}
+	}
+
+	static class EnumWrapper<T extends Enum<T>> implements State {
+		private static final Map<Enum<?>, EnumWrapper<?>> prewrapped = new WeakHashMap<Enum<?>, EnumWrapper<?>>();
+		public final T value;
+
+		@SuppressWarnings("unchecked")
+		public static <T extends Enum<T>> EnumWrapper<T> $(T value) {
+			EnumWrapper<T> wrapper;
+
+			if (prewrapped.containsKey(value)) {
+				wrapper = (EnumWrapper<T>) prewrapped.get(value);
+			} else {
+				wrapper = value != null
+						? new EnumWrapper<T>(value)
+						: null
+				;
+				prewrapped.put(value, wrapper);
+			}
+
+			return wrapper;
+		}
+
+		private EnumWrapper(T value) {
 			this.value = value;
 		}
 
@@ -195,12 +250,7 @@ public class EnumStateMachine<T extends Enum<T>> implements IStateMachine<T> {
 		@Override
 		public boolean equals(Object obj) {
 			EnumWrapper other = (EnumWrapper) obj;
-
-			if (value == null) {
-				return other == null;
-			} else {
-				return value.name().equals(other.name());
-			}
+			return value.name().equals(other.name());
 		}
 	}
 }
