@@ -16,7 +16,7 @@ public class Sequence_T {
 
 	@Test
 	public void testSequentialMatch() {
-		StateMachine<Color> sm = new StateMachine<Color>(Color.Red);
+		GenericStateMachine<Color> sm = new GenericStateMachine<Color>(Color.Red);
 		sm.addTransition(Color.Red, Color.Blue);
 		sm.addTransition(Color.Blue, Color.Green);
 		sm.addTransition(Color.Green, Color.Orange);

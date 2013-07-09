@@ -16,6 +16,13 @@ public class EnumStateMachine_T {
 		Ready, Running, Paused, Stopping, Stopped, Finished
 	}
 
+	@Test
+	public void deadSimpleTest() {
+		EnumStateMachine<State> esm = getThreadLikeMachine();
+
+		esm.addTransition(State.Ready, State.Paused);
+		esm.transition(State.Paused);
+	}
 
 	@Test
 	public void removeTransition() {
@@ -45,6 +52,7 @@ public class EnumStateMachine_T {
 //	}
 
 	@Test
+	@Ignore
 	public void stringParsingFromExistingMachine() throws ParseException {
 		EnumStateMachine<State> esm1 = getThreadLikeMachine();
 		String one = esm1.toString();
