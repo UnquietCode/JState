@@ -46,7 +46,7 @@ public class StateMachine<T extends State>
 	}
 
 	public StateMachine(T initial) {
-		this.initial = getState(initial);
+		setInitialState(initial);
 		current = this.initial;
 	}
 
@@ -62,7 +62,7 @@ public class StateMachine<T extends State>
 		final StateContainer requestedState = getState(next);
 
 		if (!current.transitions.containsKey(requestedState)) {
-			throw new TransitionException("No transition exists between "+ current.state +" and "+ next);
+			throw new TransitionException("No transition exists between "+ current +" and "+ requestedState);
 		}
 
 		StateContainer nextState = null;
@@ -158,6 +158,22 @@ public class StateMachine<T extends State>
 	}
 
 	@Override
+	public synchronized void addAllTransitions(List<T> states, boolean includeSelf) {
+		for (T state : states) {
+			List<T> _toStates;
+
+			if (includeSelf) {
+				_toStates = states;
+			} else {
+				_toStates = new ArrayList<T>(states);
+				_toStates.remove(state);
+			}
+
+			addTransitions(state, _toStates);
+		}
+	}
+
+	@Override
 	public synchronized HandlerRegistration onEntering(T state, final StateMachineCallback callback) {
 		final StateContainer s = getState(state);
 		s.entryActions.add(callback);
@@ -184,7 +200,7 @@ public class StateMachine<T extends State>
 	@Override
 	@SuppressWarnings("unchecked")
 	public synchronized HandlerRegistration onTransition(final T from, final T to, final StateMachineCallback callback) {
-		addTransitions(callback, false, from, to);
+		addTransitions(callback, false, from, Arrays.asList(to));
 
 		return new HandlerRegistration() {
 			public void unregister() {
@@ -254,18 +270,6 @@ public class StateMachine<T extends State>
 	}
 
 	@Override
-	public synchronized HandlerRegistration onSequence(T[] pattern, SequenceHandler<T> handler) {
-		if (pattern != null) {
-			return onSequence(Arrays.asList(pattern), handler);
-		} else {
-			List<T> list = new ArrayList<T>();
-			list.add(null);
-
-			return onSequence(list, handler);
-		}
-	}
-
-	@Override
 	public synchronized HandlerRegistration onSequence(List<T> pattern, SequenceHandler<T> handler) {
 		List<State> _pattern = Collections.<State>unmodifiableList(pattern);
 		final PatternMatcher matcher = new PatternMatcher(_pattern, handler);
@@ -282,36 +286,37 @@ public class StateMachine<T extends State>
 	@Override
 	@SuppressWarnings("unchecked")
 	public synchronized boolean addTransition(T fromState, T toState) {
-		return addTransitions(null, true, fromState, toState);
+		return addTransitions(null, true, fromState, Arrays.asList(toState));
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
 	public synchronized boolean addTransition(T fromState, T toState, StateMachineCallback callback) {
-		return addTransitions(callback, true, fromState, toState);
+		return addTransitions(callback, true, fromState, Arrays.asList(toState));
 	}
 
 	@Override
-	public synchronized boolean addTransitions(T fromState, T... toStates) {
+	public synchronized boolean addTransitions(T fromState, T...toStates) {
+		return addTransitions(null, true, fromState, Arrays.asList(toStates));
+	}
+
+	@Override
+	public synchronized boolean addTransitions(T fromState, List<T> toStates, StateMachineCallback callback) {
+		return addTransitions(callback, true, fromState, toStates);
+	}
+
+	@Override
+	public boolean addTransitions(T fromState, List<T> toStates) {
 		return addTransitions(null, true, fromState, toStates);
 	}
 
 	@Override
-	public synchronized boolean addTransitions(T fromState, T[] toStates, StateMachineCallback callback) {
-		return addTransitions(callback, true, fromState, toStates);
+	public boolean addTransitions(StateMachineCallback callback, T fromState, T...toStates) {
+		return addTransitions(callback, true, fromState, Arrays.asList(toStates));
 	}
 
-	/*
-		Gets around the inability to create generic arrays by flipping the
-		callback parameter position, thus freeing up the vararg parameter.
-	 */
-	@Override
-	public synchronized boolean addTransitions(StateMachineCallback callback, T fromState, T... toStates) {
-		return addTransitions(callback, true, fromState, toStates);
-	}
-
-	private boolean addTransitions(StateMachineCallback callback, boolean create, T fromState, T...toStates) {
-		Set<State> set = makeSet(toStates);
+	private boolean addTransitions(StateMachineCallback callback, boolean create, T fromState, List<T> toStates) {
+		Set<State> set = new HashSet<State>(toStates);
 		StateContainer from = getState(fromState);
 		boolean modified = false;
 
@@ -338,7 +343,12 @@ public class StateMachine<T extends State>
 
 	@Override
 	public synchronized boolean removeTransitions(T fromState, T...toStates) {
-		Set<State> set = makeSet(toStates);
+		return removeTransitions(fromState, Arrays.asList(toStates));
+	}
+
+	@Override
+	public boolean removeTransitions(T fromState, List<T> toStates) {
+		Set<State> set = new HashSet<State>(toStates);
 		StateContainer from = getState(fromState);
 		boolean modified = false;
 
@@ -365,18 +375,6 @@ public class StateMachine<T extends State>
 				transition.callbacks.remove(callback);
 			}
 		}
-	}
-
-	@Override
-	public synchronized void setTransitions(T fromState, T... toStates) {
-		setTransitions(null, fromState, toStates);
-	}
-
-	@Override
-	public synchronized void setTransitions(StateMachineCallback callback, T fromState, T... toStates) {
-		StateContainer state = getState(fromState);
-		state.transitions.clear();
-		addTransitions(callback, fromState, toStates);
 	}
 
 	/**
@@ -513,6 +511,11 @@ public class StateMachine<T extends State>
 			} else {
 				return this.state.equals(other.state);
 			}
+		}
+
+		@Override
+		public String toString() {
+			return state != null ? state.name() : "null";
 		}
 	}
 

@@ -33,18 +33,44 @@ public interface ProgrammableStateMachine<T> {
 	 */
 	HandlerRegistration onTransition(T from, T to, StateMachineCallback callback);
 
-	HandlerRegistration onSequence(T[] pattern, SequenceHandler<T> handler);
+	/**
+	 * Adds a callback which will be executed whenever the specified sequence
+	 * of states has been traversed.
+	 *
+	 * @param pattern to match
+	 * @param handler to handle the match
+	 * @return registration to assist in removing the handler
+	 */
 	HandlerRegistration onSequence(List<T> pattern, SequenceHandler<T> handler);
 
+	/*
+		Adds a transition from one state to another.
+	 */
 	boolean addTransition(T fromState, T toState);
-	boolean addTransition(T fromState, T toState, StateMachineCallback callback);
 
 	/**
-	 * Add a transition between two states.
+	 * Add a transition between one and one-or-more states.
+	 *
 	 * @param fromState the initial state
 	 * @param toStates one or more states to move to
 	 */
 	boolean addTransitions(T fromState, T...toStates);
+
+	/*
+		Adds a transition from one state to one-or-many states.
+    */
+	boolean addTransitions(T fromState, List<T> toStates);
+
+	/*
+		Adds a transition from one state to another, and adds a callback.
+	 */
+	boolean addTransition(T fromState, T toState, StateMachineCallback callback);
+
+	/*
+	    Add a transition between one and one-or-more states, and
+	    provide a callback to execute.
+	 */
+	boolean addTransitions(StateMachineCallback callback, T fromState, T...toStates);
 
 	/**
 	 * Add a transition from one state to 0..n other states. The callback
@@ -57,16 +83,17 @@ public interface ProgrammableStateMachine<T> {
 	 * @param toStates states moving to
 	 * @return true if the state machine was modified and a reset occurred, false otherwise
 	 */
-	boolean addTransitions(T fromState, T[] toStates, StateMachineCallback callback);
+	boolean addTransitions(T fromState, List<T> toStates, StateMachineCallback callback);
 
-	/*
-		Gets around the inability to create generic arrays by flipping the
-		callback parameter position, thus freeing up the vararg parameter.
+	/**
+	 * For every state in the list, create a transition to every other
+	 * state. If the includeSelf parameter is true, then each state will
+	 * also have a transition added which loops back to itself.
+	 *
+	 * @param states to add
+	 * @param includeSelf if we should add loops as well
 	 */
-	boolean addTransitions(StateMachineCallback callback, T fromState, T...toStates);
-
-	void setTransitions(T fromState, T... toStates);
-	void setTransitions(StateMachineCallback callback, T fromState, T... toStates);
+	void addAllTransitions(List<T> states, boolean includeSelf);
 
 	/**
 	 * Removes the set of transitions from the given state.
@@ -77,5 +104,7 @@ public interface ProgrammableStateMachine<T> {
 	 * @param toStates to states
 	 * @return true if the transitions were modified, false otherwise
 	 */
-	boolean removeTransitions(T fromState, T... toStates);
+	boolean removeTransitions(T fromState, T...toStates);
+
+	boolean removeTransitions(T fromState, List<T> toStates);
 }
