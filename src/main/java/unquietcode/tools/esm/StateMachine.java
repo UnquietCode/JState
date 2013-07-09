@@ -47,14 +47,27 @@ public class StateMachine<T extends State>
 
 	public StateMachine(T initial) {
 		setInitialState(initial);
-		current = this.initial;
+		reset();
 	}
 
 	@Override
 	public synchronized void reset() {
 		transitions = 0;
 		current = initial;
+		recentStates.clear();
 	}
+
+	/*
+		Something like, always add a callback to a queue,
+		so default is async, but if hits from the non-async
+		method then immediately pull the CB off the queue and execute it.
+
+		Or, returns a callback and can either execute it or queue it.
+
+		Either way, larger effort will be in the transition method to detect
+		that there is outstanding work and defer the transition (if not async)
+		or queue it (if async).
+	 */
 
 	@Override
 	@SuppressWarnings("unchecked")
