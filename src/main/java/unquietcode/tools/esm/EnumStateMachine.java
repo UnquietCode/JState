@@ -20,10 +20,7 @@
 package unquietcode.tools.esm;
 
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.*;
 
 /**
  * A state machine which runs on enums. Note that null is a valid state
@@ -87,12 +84,12 @@ public class EnumStateMachine<T extends Enum<T>>
 	}
 
 	@Override
-	public synchronized void reset() {
+	public void reset() {
 		proxy.reset();
 	}
 
 	@Override
-	public synchronized boolean transition(T state) {
+	public boolean transition(T state) {
 		return proxy.transition(EnumWrapper.$(state));
 	}
 
@@ -147,42 +144,58 @@ public class EnumStateMachine<T extends Enum<T>>
 	}
 
 	@Override
-	public synchronized boolean removeTransitions(T fromState, T...toStates) {
+	public HandlerRegistration onSequence(List<T> pattern, SequenceHandler<T> handler) {
+		List<EnumWrapper<T>> wrapped = new ArrayList<EnumWrapper<T>>();
+
+		for (T unwrapped : pattern) {
+			wrapped.add(EnumWrapper.$(unwrapped));
+		}
+
+		return proxy.onSequence(wrapped, new SequenceWrapper(handler));
+	}
+
+	@Override
+	public HandlerRegistration onSequence(T[] pattern, SequenceHandler<T> handler) {
+		return null;
+	}
+
+	@Override
+	public boolean removeTransitions(T fromState, T...toStates) {
 		return proxy.removeTransitions(EnumWrapper.$(fromState), wrap(toStates));
 	}
 
 	@Override
-	public synchronized void setTransitions(T fromState, T...toStates) {
+	public void setTransitions(T fromState, T...toStates) {
 		proxy.setTransitions(EnumWrapper.$(fromState), wrap(toStates));
 	}
 
 	@Override
-	public synchronized void setTransitions(StateMachineCallback callback, T fromState, T...toStates) {
+	public void setTransitions(StateMachineCallback callback, T fromState, T...toStates) {
 		proxy.setTransitions(callback, EnumWrapper.$(fromState), wrap(toStates));
 	}
 
 	@Override
-	public synchronized boolean addTransition(T fromState, T toState) {
+	public boolean addTransition(T fromState, T toState) {
 		return proxy.addTransition(EnumWrapper.$(fromState), EnumWrapper.$(toState));
 	}
 
 	@Override
-	public synchronized boolean addTransition(T fromState, T toState, StateMachineCallback callback) {
+	public boolean addTransition(T fromState, T toState, StateMachineCallback callback) {
 		return proxy.addTransition(EnumWrapper.$(fromState), EnumWrapper.$(toState), callback);
 	}
 
 	@Override
-	public synchronized boolean addTransitions(StateMachineCallback callback, T fromState, T...toStates) {
+	public boolean addTransitions(StateMachineCallback callback, T fromState, T...toStates) {
 		return proxy.addTransitions(callback, EnumWrapper.$(fromState), wrap(toStates));
 	}
 
 	@Override
-	public synchronized boolean addTransitions(T fromState, T...toStates) {
+	public boolean addTransitions(T fromState, T...toStates) {
 		return addTransitions(null, fromState, toStates);
 	}
 
 	@Override
-	public synchronized boolean addTransitions(T fromState, T[] toStates, StateMachineCallback callback) {
+	public boolean addTransitions(T fromState, T[] toStates, StateMachineCallback callback) {
 		return addTransitions(callback, fromState, toStates);
 	}
 
@@ -215,6 +228,25 @@ public class EnumStateMachine<T extends Enum<T>>
 		public EnumWrapper<T> route(EnumWrapper<T> current, EnumWrapper<T> next) {
 			T decision = proxy.route(current.value, next.value);
 			return EnumWrapper.$(decision);
+		}
+	}
+
+	private class SequenceWrapper implements SequenceHandler<EnumWrapper<T>> {
+		private final SequenceHandler<T> handler;
+
+		SequenceWrapper(SequenceHandler<T> handler) {
+			this.handler = handler;
+		}
+
+		@Override
+		public void onMatch(List<EnumWrapper<T>> pattern) {
+			List<T> unwrapped = new ArrayList<T>();
+
+			for (EnumWrapper<T> wrapped : pattern) {
+				unwrapped.add(wrapped.value);
+			}
+
+			handler.onMatch(Collections.unmodifiableList(unwrapped));
 		}
 	}
 

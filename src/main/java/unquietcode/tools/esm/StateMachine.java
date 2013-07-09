@@ -34,6 +34,9 @@ public class StateMachine<T extends State>
 {
 	private final Map<State, StateContainer> states = new HashMap<State, StateContainer>();
 	private final List<StateRouter<T>> routers = new ArrayList<StateRouter<T>>();
+	private final Queue<State> recentStates = new ArrayDeque<State>();
+	private final Set<PatternMatcher> matchers = new HashSet<PatternMatcher>();
+	private int maxRecent = 0;
 	private StateContainer initial;
 	private StateContainer current;
 	private long transitions = 0;
@@ -106,6 +109,24 @@ public class StateMachine<T extends State>
 		// officially finish the transition
 		transitions += 1;
 
+		// async matching
+		if (maxRecent != 0) {
+			recentStates.add(nextState.state);
+		}
+
+		if (recentStates.size() > maxRecent) {
+			recentStates.remove();
+		}
+
+		final List<State> recent
+			= Collections.unmodifiableList(new ArrayList<State>(recentStates));
+
+		for (PatternMatcher matcher : matchers) {
+			if (matcher.matches(recent.iterator(), recent.size())) {
+				matcher.handler.onMatch(matcher.pattern);
+			}
+		}
+
 		if (current == nextState) {
 			return false;
 		} else {
@@ -173,7 +194,7 @@ public class StateMachine<T extends State>
 	}
 
 	@Override
-	public HandlerRegistration routeOnTransition(final StateRouter<T> router) {
+	public synchronized HandlerRegistration routeOnTransition(final StateRouter<T> router) {
 		if (router == null) {
 			throw new IllegalArgumentException("router cannot be null");
 		}
@@ -188,7 +209,7 @@ public class StateMachine<T extends State>
 	}
 
 	@Override
-	public HandlerRegistration routeOnTransition(final T from, final T to, final StateRouter<T> router) {
+	public synchronized HandlerRegistration routeOnTransition(final T from, final T to, final StateRouter<T> router) {
 		return routeOnTransition(new StateRouter<T>() {
 			public T route(T current, T next) {
 
@@ -203,7 +224,7 @@ public class StateMachine<T extends State>
 	}
 
 	@Override
-	public HandlerRegistration routeBeforeEntering(final T to, final StateRouter<T> router) {
+	public synchronized HandlerRegistration routeBeforeEntering(final T to, final StateRouter<T> router) {
 		return routeOnTransition(new StateRouter<T>() {
 			public T route(T current, T next) {
 
@@ -218,7 +239,7 @@ public class StateMachine<T extends State>
 	}
 
 	@Override
-	public HandlerRegistration routeAfterExiting(final T from, final StateRouter<T> router) {
+	public synchronized HandlerRegistration routeAfterExiting(final T from, final StateRouter<T> router) {
 		return routeOnTransition(new StateRouter<T>() {
 			public T route(T current, T next) {
 
@@ -230,6 +251,32 @@ public class StateMachine<T extends State>
 				}
 			}
 		});
+	}
+
+	@Override
+	public synchronized HandlerRegistration onSequence(T[] pattern, SequenceHandler<T> handler) {
+		if (pattern != null) {
+			return onSequence(Arrays.asList(pattern), handler);
+		} else {
+			List<T> list = new ArrayList<T>();
+			list.add(null);
+
+			return onSequence(list, handler);
+		}
+	}
+
+	@Override
+	public synchronized HandlerRegistration onSequence(List<T> pattern, SequenceHandler<T> handler) {
+		List<State> _pattern = Collections.<State>unmodifiableList(pattern);
+		final PatternMatcher matcher = new PatternMatcher(_pattern, handler);
+		matchers.add(matcher);
+		maxRecent = Math.max(maxRecent, pattern.size());
+
+		return new HandlerRegistration() {
+			public void unregister() {
+				matchers.remove(matcher);
+			}
+		};
 	}
 
 	@Override
@@ -487,6 +534,30 @@ public class StateMachine<T extends State>
 //				return this.next.theEnum.equals(other.next.theEnum);
 //			}
 //		}
+	}
+
+	private static class PatternMatcher {
+		private final List<State> pattern;
+		private final SequenceHandler handler;
+
+		PatternMatcher(List<State> pattern, SequenceHandler handler) {
+			this.pattern = pattern;
+			this.handler = handler;
+		}
+
+		boolean matches(Iterator<State> it, int size) {
+			if (size < pattern.size()) {
+				return false;
+			}
+
+			for (State state : pattern) {
+				if (!state.equals(it.next())) {
+					return false;
+				}
+			}
+
+			return true;
+		}
 	}
 
 	private static String fullString(State state) {

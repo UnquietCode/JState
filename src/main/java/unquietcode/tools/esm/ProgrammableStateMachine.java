@@ -1,5 +1,7 @@
 package unquietcode.tools.esm;
 
+import java.util.List;
+
 /**
  * @author Ben Fagin
  * @version 2013-07-07
@@ -30,6 +32,9 @@ public interface ProgrammableStateMachine<T> {
 	 * is exited, via any transition.
 	 */
 	HandlerRegistration onTransition(T from, T to, StateMachineCallback callback);
+
+	HandlerRegistration onSequence(T[] pattern, SequenceHandler<T> handler);
+	HandlerRegistration onSequence(List<T> pattern, SequenceHandler<T> handler);
 
 	boolean addTransition(T fromState, T toState);
 	boolean addTransition(T fromState, T toState, StateMachineCallback callback);
