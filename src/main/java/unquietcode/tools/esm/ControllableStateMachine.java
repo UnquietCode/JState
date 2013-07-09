@@ -7,7 +7,7 @@ package unquietcode.tools.esm;
  * @author Ben Fagin
  * @version 2013-04-02
  */
-public interface StateMachineController<T> {
+public interface ControllableStateMachine<T> {
 
 	/**
 	 * Get the total number of transitions performed by the state machine, since

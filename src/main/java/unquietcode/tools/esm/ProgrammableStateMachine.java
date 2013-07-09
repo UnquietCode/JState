@@ -4,7 +4,7 @@ package unquietcode.tools.esm;
  * @author Ben Fagin
  * @version 2013-07-07
  */
-public interface IStateMachine<T> extends StateMachineController<T> {
+public interface ProgrammableStateMachine<T> {
 
 	/**
 	 * Will not reset, just sets the initial state.

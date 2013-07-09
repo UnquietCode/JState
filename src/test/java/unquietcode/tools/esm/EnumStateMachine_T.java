@@ -44,7 +44,6 @@ public class EnumStateMachine_T {
 		// TODO
 //	}
 
-	@Ignore
 	@Test
 	public void stringParsingFromExistingMachine() throws ParseException {
 		EnumStateMachine<State> esm1 = getThreadLikeMachine();

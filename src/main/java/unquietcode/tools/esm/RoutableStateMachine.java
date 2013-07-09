@@ -4,7 +4,7 @@ package unquietcode.tools.esm;
  * @author Ben Fagin
  * @version 2013-07-08
  */
-public interface RoutableStateMachine<T> extends IStateMachine<T> {
+public interface RoutableStateMachine<T> {
 
 	/**
 	 * Add a new router to the state machine. Order matters!

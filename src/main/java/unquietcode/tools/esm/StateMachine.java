@@ -29,7 +29,9 @@ import java.util.*;
  * @author  Benjamin Fagin
  * @version 12-23-2010
  */
-public class StateMachine<T extends State> implements IStateMachine<T>, RoutableStateMachine<T> {
+public class StateMachine<T extends State>
+	implements ControllableStateMachine<T>, ProgrammableStateMachine<T>, RoutableStateMachine<T>
+{
 	private final Map<State, StateContainer> states = new HashMap<State, StateContainer>();
 	private final List<StateRouter<T>> routers = new ArrayList<StateRouter<T>>();
 	private StateContainer initial;

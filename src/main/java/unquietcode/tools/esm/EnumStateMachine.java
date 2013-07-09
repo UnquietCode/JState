@@ -32,7 +32,8 @@ import java.util.WeakHashMap;
  * @author  Benjamin Fagin
  * @version 12-23-2010
  */
-public class EnumStateMachine<T extends Enum<T>> implements IStateMachine<T>, RoutableStateMachine<T> {
+public class EnumStateMachine<T extends Enum<T>>
+	implements ControllableStateMachine<T>, ProgrammableStateMachine<T>, RoutableStateMachine<T> {
 	private final StateMachine<EnumWrapper<T>> proxy = new StateMachine<EnumWrapper<T>>();
 
 	public EnumStateMachine() {
