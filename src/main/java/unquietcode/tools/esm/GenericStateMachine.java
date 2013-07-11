@@ -30,18 +30,22 @@ import java.util.*;
  * @version 12-23-2010
  */
 public class GenericStateMachine<T extends State> implements StateMachine<T> {
+
+	// states, and the routers that route them
 	private final Map<StateWrapper, StateContainer> states = new HashMap<StateWrapper, StateContainer>();
+	private final List<StateRouter<T>> routers = new ArrayList<StateRouter<T>>();
 
 	// sequence matching
 	private int maxRecent = 0;
 	private final Queue<State> recentStates = new ArrayDeque<State>();
 	private final Set<PatternMatcher> matchers = new HashSet<PatternMatcher>();
 
-	private final List<StateRouter<T>> routers = new ArrayList<StateRouter<T>>();
+	// global handlers
 	private final Set<StateHandler<T>> globalOnEntryHandlers = new HashSet<StateHandler<T>>();
 	private final Set<StateHandler<T>> globalOnExitHandlers = new HashSet<StateHandler<T>>();
 	private final Set<TransitionHandler<T>> globalOnTransitionHandlers = new HashSet<TransitionHandler<T>>();
 
+	// backing data
 	private StateContainer initial;
 	private StateContainer current;
 	private long transitions;
