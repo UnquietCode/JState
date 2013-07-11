@@ -21,7 +21,7 @@ public class StringStateMachine extends WrappedStateMachine<StringStateMachine.S
 
 	@Override
 	protected String unwrap(StringState wrapped) {
-		return wrapped.string.trim().intern();
+		return wrapped.string;
 	}
 
 	static class StringState implements State {
