@@ -55,5 +55,22 @@ public class Routing_T {
 		assertEquals(0, c3.get());
 	}
 
+	@Test(expected=TransitionException.class)
+	public void testInvalidRoutingResult() {
+		EnumStateMachine<TestStates> esm = new EnumStateMachine<TestStates>();
+		esm.addTransition(null, TestStates.One);
+		esm.addTransition(TestStates.One, TestStates.Two);
+
+		// this should cause a failure, One -> Three not valid
+		esm.routeAfterExiting(TestStates.One, new StateRouter<TestStates>() {
+			public TestStates route(TestStates current, TestStates next) {
+				return TestStates.Three;
+			}
+		});
+
+		esm.transition(TestStates.One);
+		esm.transition(TestStates.Two);
+	}
+
 	enum TestStates { One, Two, Three }
 }

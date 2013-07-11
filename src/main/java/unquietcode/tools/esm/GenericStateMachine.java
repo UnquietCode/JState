@@ -80,36 +80,12 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public synchronized boolean transition(T next) {
+	public synchronized boolean transition(final T next) {
 		final StateContainer requestedState = getState(next);
+		final StateContainer nextState = route(next, requestedState);
 
-		if (!current.transitions.containsKey(requestedState)) {
+		if (!current.transitions.containsKey(nextState)) {
  			throw new TransitionException("No transition exists between "+ current +" and "+ requestedState);
-		}
-
-		StateContainer nextState = null;
-
-		// routing
-		for (StateRouter<T> router : routers) {
-			T decision = router.route((T) current.state, next);
-
-			if (decision != null) {
-
-				// if it's the same, bypass lookup
-				if (decision == next) {
-					nextState = requestedState;
-				}
-
-				// otherwise lookup the new state
-				else {
-					nextState = getState(decision);
-				}
-			}
-		}
-
-		// default to the originally requested state
-		if (nextState == null) {
-			nextState = requestedState;
 		}
 
 		onExit();
@@ -143,6 +119,36 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 			current = nextState;
 			return true;
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private StateContainer route(T next, StateContainer requestedState) {
+		StateContainer nextState = null;
+
+		// routing
+		for (StateRouter<T> router : routers) {
+			T decision = router.route((T) current.state, next);
+
+			if (decision != null) {
+
+				// if it's the same, bypass lookup
+				if (decision == next) {
+					nextState = requestedState;
+				}
+
+				// otherwise lookup the new state
+				else {
+					nextState = getState(decision);
+				}
+			}
+		}
+
+		// default to the originally requested state
+		if (nextState == null) {
+			nextState = requestedState;
+		}
+
+		return nextState;
 	}
 
 	@SuppressWarnings("unchecked")
