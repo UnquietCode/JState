@@ -66,18 +66,6 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		recentStates.clear();
 	}
 
-	/*
-		Something like, always add a callback to a queue,
-		so default is async, but if hits from the non-async
-		method then immediately pull the CB off the queue and execute it.
-
-		Or, returns a callback and can either execute it or queue it.
-
-		Either way, larger effort will be in the transition method to detect
-		that there is outstanding work and defer the transition (if not async)
-		or queue it (if async).
-	 */
-
 	@Override
 	@SuppressWarnings("unchecked")
 	public synchronized boolean transition(final T next) {
@@ -92,10 +80,19 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		onTransition(nextState);
 		onEntry(nextState);
 
-		// officially finish the transition
 		transitions += 1;
+		doPatternMatching(nextState);
 
-		// async matching
+		if (current == nextState) {
+			return false;
+		} else {
+			current = nextState;
+			return true;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void doPatternMatching(StateContainer nextState) {
 		if (maxRecent != 0) {
 			recentStates.add(nextState.state);
 		}
@@ -111,13 +108,6 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 			if (matcher.matches(recent.iterator(), recent.size())) {
 				matcher.handler.onMatch(matcher.pattern);
 			}
-		}
-
-		if (current == nextState) {
-			return false;
-		} else {
-			current = nextState;
-			return true;
 		}
 	}
 
