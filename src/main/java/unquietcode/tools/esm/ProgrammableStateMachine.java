@@ -16,16 +16,34 @@ public interface ProgrammableStateMachine<T> {
 	void setInitialState(T state);
 
 	/**
+	 * Adds a callback which will be executed whenever any state
+	 * is entered.
+	 */
+	HandlerRegistration onEntering(StateHandler<T> callback);
+
+	/**
 	 * Adds a callback which will be executed whenever the specified state
 	 * is entered, via any transition.
 	 */
 	HandlerRegistration onEntering(T state, StateHandler<T> callback);
 
 	/**
+	 * Adds a callback which will be executed whenever any state
+	 * is exited.
+	 */
+	HandlerRegistration onExiting(StateHandler<T> callback);
+
+	/**
 	 * Adds a callback which will be executed whenever the specified state
 	 * is exited, via any transition.
 	 */
 	HandlerRegistration onExiting(T state, StateHandler<T> callback);
+
+	/**
+	 * Adds a callback which will be executed whenever any state
+	 * transitions to another state.
+	 */
+	HandlerRegistration onTransition(TransitionHandler<T> callback);
 
 	/**
 	 * Adds a callback which will be executed whenever the specified state

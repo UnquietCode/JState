@@ -90,13 +90,28 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 	}
 
 	@Override
+	public HandlerRegistration onEntering(StateHandler<_Type> callback) {
+		return proxy.onEntering(new StateCallbackWrapper(callback));
+	}
+
+	@Override
 	public HandlerRegistration onEntering(_Type state, StateHandler<_Type> callback) {
 		return proxy.onEntering(_wrap(state), new StateCallbackWrapper(callback));
 	}
 
 	@Override
+	public HandlerRegistration onExiting(StateHandler<_Type> callback) {
+		return proxy.onExiting(new StateCallbackWrapper(callback));
+	}
+
+	@Override
 	public HandlerRegistration onExiting(_Type state, StateHandler<_Type> callback) {
 		return proxy.onExiting(_wrap(state), new StateCallbackWrapper(callback));
+	}
+
+	@Override
+	public HandlerRegistration onTransition(TransitionHandler<_Type> callback) {
+		return proxy.onTransition(new TransitionCallbackWrapper(callback));
 	}
 
 	@Override

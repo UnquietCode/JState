@@ -31,10 +31,17 @@ import java.util.*;
  */
 public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	private final Map<StateWrapper, StateContainer> states = new HashMap<StateWrapper, StateContainer>();
-	private final List<StateRouter<T>> routers = new ArrayList<StateRouter<T>>();
+
+	// sequence matching
+	private int maxRecent = 0;
 	private final Queue<State> recentStates = new ArrayDeque<State>();
 	private final Set<PatternMatcher> matchers = new HashSet<PatternMatcher>();
-	private int maxRecent = 0;
+
+	private final List<StateRouter<T>> routers = new ArrayList<StateRouter<T>>();
+	private final Set<StateHandler<T>> globalOnEntryHandlers = new HashSet<StateHandler<T>>();
+	private final Set<StateHandler<T>> globalOnExitHandlers = new HashSet<StateHandler<T>>();
+	private final Set<TransitionHandler<T>> globalOnTransitionHandlers = new HashSet<TransitionHandler<T>>();
+
 	private StateContainer initial;
 	private StateContainer current;
 	private long transitions;
@@ -101,21 +108,9 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 			nextState = requestedState;
 		}
 
-		// exit callbacks
-		for (StateHandler exitAction : current.exitActions) {
-			exitAction.onState(current.state);
-		}
-
-		// transition callbacks
-		Transition transition = current.transitions.get(nextState);
-		for (TransitionHandler callback : transition.callbacks) {
-			callback.onTransition(current.state, nextState.state);
-		}
-
-		// entry callbacks
-		for (StateHandler entryAction : nextState.entryActions) {
-			entryAction.onState(nextState.state);
-		}
+		onExit();
+		onTransition(nextState);
+		onEntry(nextState);
 
 		// officially finish the transition
 		transitions += 1;
@@ -143,6 +138,38 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		} else {
 			current = nextState;
 			return true;
+		}
+	}
+
+	private void onEntry(StateContainer nextState) {
+		for (StateHandler handler : globalOnEntryHandlers) {
+			handler.onState(nextState.state);
+		}
+
+		for (StateHandler entryAction : nextState.entryActions) {
+			entryAction.onState(nextState.state);
+		}
+	}
+
+	private void onTransition(StateContainer nextState) {
+		for (TransitionHandler handler : globalOnTransitionHandlers) {
+			handler.onTransition(current.state, nextState.state);
+		}
+
+		Transition transition = current.transitions.get(nextState);
+
+		for (TransitionHandler handler : transition.callbacks) {
+			handler.onTransition(current.state, nextState.state);
+		}
+	}
+
+	private void onExit() {
+		for (StateHandler handler : globalOnExitHandlers) {
+			handler.onState(current.state);
+		}
+
+		for (StateHandler handler : current.exitActions) {
+			handler.onState(current.state);
 		}
 	}
 
@@ -185,6 +212,17 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	}
 
 	@Override
+	public HandlerRegistration onEntering(final StateHandler<T> callback) {
+		globalOnEntryHandlers.add(callback);
+
+		return new HandlerRegistration() {
+			public void unregister() {
+				globalOnEntryHandlers.remove(callback);
+			}
+		};
+	}
+
+	@Override
 	public synchronized HandlerRegistration onEntering(T state, final StateHandler<T> callback) {
 		final StateContainer s = getState(state);
 		s.entryActions.add(callback);
@@ -192,6 +230,17 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		return new HandlerRegistration() {
 			public void unregister() {
 				s.entryActions.remove(callback);
+			}
+		};
+	}
+
+	@Override
+	public HandlerRegistration onExiting(final StateHandler<T> callback) {
+		globalOnExitHandlers.add(callback);
+
+		return new HandlerRegistration() {
+			public void unregister() {
+				globalOnExitHandlers.remove(callback);
 			}
 		};
 	}
@@ -207,6 +256,18 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 			}
 		};
 	}
+
+	@Override
+	public HandlerRegistration onTransition(final TransitionHandler<T> callback) {
+		globalOnTransitionHandlers.add(callback);
+
+		return new HandlerRegistration() {
+			public void unregister() {
+				globalOnTransitionHandlers.remove(callback);
+			}
+		};
+	}
+
 
 	@Override
 	@SuppressWarnings("unchecked")
