@@ -145,6 +145,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	private void onEntry(StateContainer nextState) {
 		for (StateHandler handler : globalOnEntryHandlers) {
 			handler.onState(nextState.state);
@@ -155,6 +156,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	private void onTransition(StateContainer nextState) {
 		for (TransitionHandler handler : globalOnTransitionHandlers) {
 			handler.onTransition(current.state, nextState.state);
@@ -167,6 +169,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	private void onExit() {
 		for (StateHandler handler : globalOnExitHandlers) {
 			handler.onState(current.state);
