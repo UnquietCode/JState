@@ -19,19 +19,19 @@ public interface ProgrammableStateMachine<T> {
 	 * Adds a callback which will be executed whenever the specified state
 	 * is entered, via any transition.
 	 */
-	HandlerRegistration onEntering(T state, StateMachineCallback callback);
+	HandlerRegistration onEntering(T state, StateHandler<T> callback);
 
 	/**
 	 * Adds a callback which will be executed whenever the specified state
 	 * is exited, via any transition.
 	 */
-	HandlerRegistration onExiting(T state, StateMachineCallback callback);
+	HandlerRegistration onExiting(T state, StateHandler<T> callback);
 
 	/**
 	 * Adds a callback which will be executed whenever the specified state
 	 * is exited, via any transition.
 	 */
-	HandlerRegistration onTransition(T from, T to, StateMachineCallback callback);
+	HandlerRegistration onTransition(T from, T to, TransitionHandler<T> callback);
 
 	/**
 	 * Adds a callback which will be executed whenever the specified sequence
@@ -64,13 +64,13 @@ public interface ProgrammableStateMachine<T> {
 	/*
 		Adds a transition from one state to another, and adds a callback.
 	 */
-	boolean addTransition(T fromState, T toState, StateMachineCallback callback);
+	boolean addTransition(T fromState, T toState, TransitionHandler<T> callback);
 
 	/*
 	    Add a transition between one and one-or-more states, and
 	    provide a callback to execute.
 	 */
-	boolean addTransitions(StateMachineCallback callback, T fromState, T...toStates);
+	boolean addTransitions(TransitionHandler<T> callback, T fromState, T...toStates);
 
 	/**
 	 * Add a transition from one state to 0..n other states. The callback
@@ -83,7 +83,7 @@ public interface ProgrammableStateMachine<T> {
 	 * @param toStates states moving to
 	 * @return true if the state machine was modified and a reset occurred, false otherwise
 	 */
-	boolean addTransitions(T fromState, List<T> toStates, StateMachineCallback callback);
+	boolean addTransitions(T fromState, List<T> toStates, TransitionHandler<T> callback);
 
 	/**
 	 * For every state in the list, create a transition to every other

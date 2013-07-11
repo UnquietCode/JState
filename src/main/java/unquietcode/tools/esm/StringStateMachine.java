@@ -21,7 +21,7 @@ public class StringStateMachine extends WrappedStateMachine<StringStateMachine.S
 
 	@Override
 	protected String unwrap(StringState wrapped) {
-		return wrapped.string;
+		return wrapped.string.trim().intern();
 	}
 
 	static class StringState implements State {
@@ -29,13 +29,9 @@ public class StringStateMachine extends WrappedStateMachine<StringStateMachine.S
 
 		public StringState(String string) {
 			if (string != null) {
-				string = string.trim().toUpperCase().intern();
+				string = string.trim().intern();
 			}
 			this.string = string;
-		}
-
-		public static StringState $(String string) {
-			return new StringState(string);
 		}
 
 		public String name() {

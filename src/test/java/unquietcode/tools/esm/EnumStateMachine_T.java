@@ -67,8 +67,8 @@ public class EnumStateMachine_T {
 		final AtomicInteger exited = new AtomicInteger(0);
 		final AtomicInteger transitioned = new AtomicInteger(0);
 
-		StateMachineCallback cb = new StateMachineCallback() {
-			public void performAction() {
+		TransitionHandler<State> cb = new TransitionHandler<State>() {
+			public void onTransition(State from, State to) {
 				transitioned.incrementAndGet();
 			}
 		};
@@ -77,14 +77,15 @@ public class EnumStateMachine_T {
 		esm.addTransitions(cb, State.Ready, State.Running);
 		esm.addTransitions(cb, State.Running, State.Stopped);
 
-		esm.onEntering(State.Running, new StateMachineCallback() {
-			public void performAction() {
+		esm.onEntering(State.Running, new StateHandler<State>() {
+			public void onState(State state) {
 				entered.incrementAndGet();
 			}
 		});
 
-		esm.onExiting(State.Running, new StateMachineCallback() {
-			public void performAction() {
+		esm.onExiting(State.Running, new StateHandler<State>() {
+			@Override
+			public void onState(State state) {
 				exited.incrementAndGet();
 			}
 		});
@@ -105,8 +106,8 @@ public class EnumStateMachine_T {
 	public void transitionCallback() {
 		final AtomicInteger counter = new AtomicInteger(0);
 
-		StateMachineCallback cb = new StateMachineCallback() {
-			public void performAction() {
+		TransitionHandler<State> cb = new TransitionHandler<State>() {
+			public void onTransition(State from, State to) {
 				counter.incrementAndGet();
 			}
 		};
@@ -122,8 +123,8 @@ public class EnumStateMachine_T {
 	public void duplicateTransitionCallback() {
 		final AtomicInteger counter = new AtomicInteger(0);
 
-		StateMachineCallback cb = new StateMachineCallback() {
-			public void performAction() {
+		TransitionHandler<State> cb = new TransitionHandler<State>() {
+			public void onTransition(State from, State to) {
 				counter.incrementAndGet();
 			}
 		};
@@ -140,8 +141,8 @@ public class EnumStateMachine_T {
 	public void multiUseTransitionCallback() {
 		final AtomicInteger counter = new AtomicInteger(0);
 
-		StateMachineCallback cb = new StateMachineCallback() {
-			public void performAction() {
+		TransitionHandler<State> cb = new TransitionHandler<State>() {
+			public void onTransition(State from, State to) {
 				counter.incrementAndGet();
 			}
 		};

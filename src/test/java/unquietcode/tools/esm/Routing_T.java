@@ -21,20 +21,20 @@ public class Routing_T {
 		EnumStateMachine<TestStates> esm = new EnumStateMachine<TestStates>(TestStates.One);
 		esm.addAll(TestStates.class, true);
 
-		esm.onEntering(TestStates.One, new StateMachineCallback() {
-			public void performAction() {
+		esm.onEntering(TestStates.One, new StateHandler<TestStates>() {
+			public void onState(TestStates state) {
 				c1.incrementAndGet();
 			}
 		});
 
-		esm.onEntering(TestStates.Two, new StateMachineCallback() {
-			public void performAction() {
+		esm.onEntering(TestStates.Two, new StateHandler<TestStates>() {
+			public void onState(TestStates state) {
 				c2.incrementAndGet();
 			}
 		});
 
-		esm.onEntering(TestStates.Three, new StateMachineCallback() {
-			public void performAction() {
+		esm.onEntering(TestStates.Three, new StateHandler<TestStates>() {
+			public void onState(TestStates state) {
 				c3.incrementAndGet();
 			}
 		});

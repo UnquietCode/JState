@@ -102,19 +102,19 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		}
 
 		// exit callbacks
-		for (StateMachineCallback exitAction : current.exitActions) {
-			exitAction.performAction();
+		for (StateHandler exitAction : current.exitActions) {
+			exitAction.onState(current.state);
 		}
 
 		// transition callbacks
 		Transition transition = current.transitions.get(nextState);
-		for (StateMachineCallback callback : transition.callbacks) {
-			callback.performAction();
+		for (TransitionHandler callback : transition.callbacks) {
+			callback.onTransition(current.state, nextState.state);
 		}
 
 		// entry callbacks
-		for (StateMachineCallback entryAction : nextState.entryActions) {
-			entryAction.performAction();
+		for (StateHandler entryAction : nextState.entryActions) {
+			entryAction.onState(nextState.state);
 		}
 
 		// officially finish the transition
@@ -185,7 +185,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	}
 
 	@Override
-	public synchronized HandlerRegistration onEntering(T state, final StateMachineCallback callback) {
+	public synchronized HandlerRegistration onEntering(T state, final StateHandler<T> callback) {
 		final StateContainer s = getState(state);
 		s.entryActions.add(callback);
 
@@ -197,7 +197,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	}
 
 	@Override
-	public synchronized HandlerRegistration onExiting(T state, final StateMachineCallback callback) {
+	public synchronized HandlerRegistration onExiting(T state, final StateHandler<T> callback) {
 		final StateContainer s = getState(state);
 		s.exitActions.add(callback);
 
@@ -210,7 +210,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public synchronized HandlerRegistration onTransition(final T from, final T to, final StateMachineCallback callback) {
+	public synchronized HandlerRegistration onTransition(final T from, final T to, final TransitionHandler<T> callback) {
 		addTransitions(callback, false, from, Arrays.asList(to));
 
 		return new HandlerRegistration() {
@@ -302,7 +302,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public synchronized boolean addTransition(T fromState, T toState, StateMachineCallback callback) {
+	public synchronized boolean addTransition(T fromState, T toState, TransitionHandler<T> callback) {
 		return addTransitions(callback, true, fromState, Arrays.asList(toState));
 	}
 
@@ -312,7 +312,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	}
 
 	@Override
-	public synchronized boolean addTransitions(T fromState, List<T> toStates, StateMachineCallback callback) {
+	public synchronized boolean addTransitions(T fromState, List<T> toStates, TransitionHandler<T> callback) {
 		return addTransitions(callback, true, fromState, toStates);
 	}
 
@@ -322,11 +322,11 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	}
 
 	@Override
-	public boolean addTransitions(StateMachineCallback callback, T fromState, T...toStates) {
+	public boolean addTransitions(TransitionHandler<T> callback, T fromState, T...toStates) {
 		return addTransitions(callback, true, fromState, Arrays.asList(toStates));
 	}
 
-	private boolean addTransitions(StateMachineCallback callback, boolean create, T fromState, List<T> toStates) {
+	private boolean addTransitions(TransitionHandler<T> callback, boolean create, T fromState, List<T> toStates) {
 		Set<T> set = new HashSet<T>(toStates);
 		StateContainer from = getState(fromState);
 		boolean modified = false;
@@ -374,7 +374,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		return modified;
 	}
 
-	private void removeCallback(StateMachineCallback callback, T fromState, T...toStates) {
+	private void removeCallback(TransitionHandler callback, T fromState, T...toStates) {
 		Set<T> set = new HashSet<T>(Arrays.asList(toStates));
 		StateContainer from = getState(fromState);
 
@@ -496,8 +496,8 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	private static class StateContainer {
 		final State state;
 		final Map<StateContainer, Transition> transitions = new HashMap<StateContainer, Transition>();
-		final Set<StateMachineCallback> entryActions = new HashSet<StateMachineCallback>();
-		final Set<StateMachineCallback> exitActions = new HashSet<StateMachineCallback>();
+		final Set<StateHandler> entryActions = new HashSet<StateHandler>();
+		final Set<StateHandler> exitActions = new HashSet<StateHandler>();
 
 		StateContainer(State state) {
 			this.state = state;
@@ -542,7 +542,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 
 	private static class Transition {
 		final StateContainer next;
-		final Set<StateMachineCallback> callbacks = new HashSet<StateMachineCallback>();
+		final Set<TransitionHandler> callbacks = new HashSet<TransitionHandler>();
 
 		Transition(StateContainer next) {
 			this.next = next;

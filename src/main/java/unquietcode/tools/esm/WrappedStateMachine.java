@@ -90,18 +90,18 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 	}
 
 	@Override
-	public HandlerRegistration onEntering(_Type state, StateMachineCallback callback) {
-		return proxy.onEntering(_wrap(state), callback);
+	public HandlerRegistration onEntering(_Type state, StateHandler<_Type> callback) {
+		return proxy.onEntering(_wrap(state), new StateCallbackWrapper(callback));
 	}
 
 	@Override
-	public HandlerRegistration onExiting(_Type state, StateMachineCallback callback) {
-		return proxy.onExiting(_wrap(state), callback);
+	public HandlerRegistration onExiting(_Type state, StateHandler<_Type> callback) {
+		return proxy.onExiting(_wrap(state), new StateCallbackWrapper(callback));
 	}
 
 	@Override
-	public HandlerRegistration onTransition(_Type from, _Type to, StateMachineCallback callback) {
-		return proxy.onTransition(_wrap(from), _wrap(to), callback);
+	public HandlerRegistration onTransition(_Type from, _Type to, TransitionHandler<_Type> callback) {
+		return proxy.onTransition(_wrap(from), _wrap(to), new TransitionCallbackWrapper(callback));
 	}
 
 	@Override
@@ -140,8 +140,8 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 	}
 
 	@Override
-	public boolean addTransitions(StateMachineCallback callback, _Type fromState, _Type...toStates) {
-		return proxy.addTransitions(_wrap(fromState), wrap(toStates), callback);
+	public boolean addTransitions(TransitionHandler<_Type> callback, _Type fromState, _Type...toStates) {
+		return proxy.addTransitions(_wrap(fromState), wrap(toStates), new TransitionCallbackWrapper(callback));
 	}
 
 	@Override
@@ -150,8 +150,8 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 	}
 
 	@Override
-	public boolean addTransition(_Type fromState, _Type toState, StateMachineCallback callback) {
-		return proxy.addTransition(_wrap(fromState), _wrap(toState), callback);
+	public boolean addTransition(_Type fromState, _Type toState, TransitionHandler<_Type> callback) {
+		return proxy.addTransition(_wrap(fromState), _wrap(toState), new TransitionCallbackWrapper(callback));
 	}
 
 	@Override
@@ -165,8 +165,8 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 	}
 
 	@Override
-	public boolean addTransitions(_Type fromState, List<_Type> toStates, StateMachineCallback callback) {
-		return proxy.addTransitions(_wrap(fromState), wrap(toStates), callback);
+	public boolean addTransitions(_Type fromState, List<_Type> toStates, TransitionHandler<_Type> callback) {
+		return proxy.addTransitions(_wrap(fromState), wrap(toStates), new TransitionCallbackWrapper(callback));
 	}
 
 	@Override
@@ -207,6 +207,17 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 			_Type decision = proxy.route(_unwrap(current), _unwrap(next));
 			return _wrap(decision);
 		}
+
+		@Override
+		public int hashCode() {
+			return proxy.hashCode();
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			RouterWrapper other = (RouterWrapper) obj;
+			return proxy.equals(other.proxy);
+		}
 	}
 
 	private class SequenceWrapper implements SequenceHandler<_Wrapper> {
@@ -225,6 +236,66 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 			}
 
 			handler.onMatch(Collections.unmodifiableList(unwrapped));
+		}
+
+		@Override
+		public int hashCode() {
+			return handler.hashCode();
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			SequenceWrapper other = (SequenceWrapper) obj;
+			return handler.equals(other.handler);
+		}
+	}
+
+	private class StateCallbackWrapper implements StateHandler<_Wrapper> {
+		private final StateHandler<_Type> callback;
+
+		StateCallbackWrapper(StateHandler<_Type> callback) {
+			this.callback = callback;
+		}
+
+		@Override
+		public void onState(_Wrapper state) {
+			callback.onState(_unwrap(state));
+		}
+
+		@Override
+		public int hashCode() {
+			return callback.hashCode();
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			StateCallbackWrapper other = (StateCallbackWrapper) obj;
+			return callback.equals(other.callback);
+		}
+	}
+
+
+	private class TransitionCallbackWrapper implements TransitionHandler<_Wrapper> {
+		private final TransitionHandler<_Type> callback;
+
+		TransitionCallbackWrapper(TransitionHandler<_Type> callback) {
+			this.callback = callback;
+		}
+
+		@Override
+		public void onTransition(_Wrapper from, _Wrapper to) {
+			callback.onTransition(_unwrap(from), _unwrap(to));
+		}
+
+		@Override
+		public int hashCode() {
+			return callback.hashCode();
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			TransitionCallbackWrapper other = (TransitionCallbackWrapper) obj;
+			return callback.equals(other.callback);
 		}
 	}
 }
