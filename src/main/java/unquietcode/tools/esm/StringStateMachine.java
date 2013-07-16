@@ -35,7 +35,7 @@ public class StringStateMachine extends WrappedStateMachine<StringStateMachine.S
 		}
 
 		public String name() {
-			return string;
+			return string.toLowerCase().intern();
 		}
 	}
 }
