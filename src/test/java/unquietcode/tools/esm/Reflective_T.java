@@ -30,7 +30,8 @@ public class Reflective_T {
 				addTransition("green", null);
 			}
 
-			public void onEnteringBlue() {
+			public void onEnteringBlue(String state) {
+				assertEquals("blue", state);
 				enteringBlue.incrementAndGet();
 			}
 
