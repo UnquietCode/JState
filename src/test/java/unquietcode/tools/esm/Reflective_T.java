@@ -51,11 +51,11 @@ public class Reflective_T {
 				enteringAny.incrementAndGet();
 			}
 
-			public void onExiting(String state) {
+			public void onExiting() {
 				exitingAny.incrementAndGet();
 			}
 
-			public void onTransition(String from, String to) {
+			public void onTransition() {
 				transitionAny.incrementAndGet();
 			}
 		};
