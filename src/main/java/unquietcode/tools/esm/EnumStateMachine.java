@@ -1,20 +1,18 @@
 /*******************************************************************************
- Copyright 2013 Benjamin Fagin
+ Enum State Machine - a Java state machine library
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-        http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+ Written in 2013 by Benjamin Fagin (blouis@unquietcode.com).
 
 
-    Read the included LICENSE.TXT for more information.
+ To the extent possible under law, the author(s) have dedicated all copyright
+ and related and neighboring rights to this software to the public domain
+ worldwide. This software is distributed without any warranty.
+
+ You should have received a copy of the CC0 Public Domain Dedication along with
+ this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+
+ Though not enforced, please consider providing attribution for the original
+ authors in your projects which make use of, or derive from, this software.
  ******************************************************************************/
 
 package unquietcode.tools.esm;
