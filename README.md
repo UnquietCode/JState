@@ -44,7 +44,7 @@ set up a new state machine as follows:
 
 ```java
 enum State {
-Ready, Running, Paused, Stopping, Stopped, Finished
+    Ready, Running, Paused, Stopping, Stopped, Finished
 }
 
 ...
