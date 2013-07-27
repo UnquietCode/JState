@@ -50,7 +50,7 @@ public class EnumStateMachine_T {
 	}
 
 	@Test
-	public void stringParsingFromExistingMachine() throws ParseException {
+	public void stringParsingFromExistingEnumMachine() throws ParseException {
 		EnumStateMachine<Something> esm1 = new EnumStateMachine<Something>();
 
 		// single
@@ -66,6 +66,27 @@ public class EnumStateMachine_T {
 		String stringRepresentation = esm1.toString();
 		EnumStateMachine<Something> esm2 = new EnumStateMachine<Something>();
 		StateMachineStringParser.configureStateMachine(Something.class, stringRepresentation, esm2);
+
+		Assert.assertEquals(stringRepresentation, esm2.toString());
+	}
+
+	@Test
+	public void stringParsingFromExistingStringMachine() throws ParseException {
+		StringStateMachine esm1 = new StringStateMachine();
+
+		// single
+		esm1.addTransition("one", "two");
+
+		// multiple
+		esm1.addTransition("two", "one");
+		esm1.addTransition("two", "Three");
+
+		// looping
+		esm1.addTransition("three", "three");
+
+		String stringRepresentation = esm1.toString();
+		StringStateMachine esm2 = new StringStateMachine();
+		StateMachineStringParser.configureStateMachine(String.class, stringRepresentation, esm2);
 
 		Assert.assertEquals(stringRepresentation, esm2.toString());
 	}

@@ -30,7 +30,7 @@ import java.util.List;
  * @author  Benjamin Fagin
  * @version 07-06-2013
  */
-public class StateMachineStringParser<V extends State, T extends FactoryStateMachine<V> & ProgrammableStateMachine<V>> {
+public class StateMachineStringParser<V, T extends FactoryStateMachine<V> & ProgrammableStateMachine<V>> {
 	private final StringBuilder buffer;
 	private final T stateMachine;
 
@@ -54,17 +54,17 @@ public class StateMachineStringParser<V extends State, T extends FactoryStateMac
 	 * @throws  ParseException  if the configuration string is malformed
 	 */
 
-	public static <V extends State, T extends FactoryStateMachine<V> & ProgrammableStateMachine<V>>
+	public static <V, T extends FactoryStateMachine<V> & ProgrammableStateMachine<V>>
 	void configureStateMachine(Class<V> clazz, String string, T stateMachine) throws ParseException {
 		configure(clazz, new StringBuilder(string), stateMachine);
 	}
 
-	public static <V extends State, T extends FactoryStateMachine<V> & ProgrammableStateMachine<V>>
+	public static <V, T extends FactoryStateMachine<V> & ProgrammableStateMachine<V>>
 	void configureStateMachine(Class<V> clazz, StringBuilder buffer, T stateMachine) throws ParseException {
 		configure(clazz, new StringBuilder(buffer), stateMachine);
 	}
 
-	private static <V extends State, T extends FactoryStateMachine<V> & ProgrammableStateMachine<V>>
+	private static <V, T extends FactoryStateMachine<V> & ProgrammableStateMachine<V>>
 	void configure(Class<V> clazz, StringBuilder buffer, T stateMachine) throws ParseException {
 		StateMachineStringParser<V, T> parser = new StateMachineStringParser<V, T>(buffer, stateMachine);
 		stateMachine.setType(clazz);
