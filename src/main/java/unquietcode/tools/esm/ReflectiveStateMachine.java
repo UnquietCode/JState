@@ -45,8 +45,25 @@ public abstract class ReflectiveStateMachine extends StringStateMachine {
 	}
 
 	/**
-	 * A method which can be used to declare transitions inline at the
-	 * time that the class is created, which supports anonymous instances.
+	 * A convenience method which can be used to declare transitions inline at
+	 * the time that the class is created, which supports anonymous instances.
+	 *
+	 * Usage:
+	 *
+	 * <p>ReflectiveStateMachine sm = new ReflectiveStateMachine() {
+	 *
+	 *		protected void declareTransitions() {
+	 *			addTransition(null, "blue");
+	 *			addTransition("blue", "green");
+	 *			addTransition("green", null);
+	 *		}
+	 *
+	 *		public void onEnteringBlue(String state) {
+	 *			assertEquals("blue", state);
+	 *			enteringBlue.incrementAndGet();
+	 *		}
+	 * }</p>
+	 *
 	 */
 	protected void declareTransitions() {
 		// children can override to provide functionality
