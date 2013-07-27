@@ -33,7 +33,8 @@ import java.util.*;
  * @author  Benjamin Fagin
  * @version 12-23-2010
  */
-public class EnumStateMachine<T extends Enum<T>> extends WrappedStateMachine<EnumStateMachine.EnumWrapper<T>, T> {
+public class EnumStateMachine<T extends Enum<T>> extends WrappedStateMachine<EnumStateMachine.EnumWrapper<T>, T> implements FactoryStateMachine<T> {
+	private Class<T> genericType;
 
 	public EnumStateMachine() {
 		super();
@@ -41,14 +42,40 @@ public class EnumStateMachine<T extends Enum<T>> extends WrappedStateMachine<Enu
 
 	public EnumStateMachine(T initial) {
 		super(initial);
+
+		// try to help by setting the type
+		if (initial != null) {
+			setType(initial.getDeclaringClass());
+		}
 	}
 
+	/**
+	 * Add transitions between every enum in the class.
+	 * If includeSelf is set, then every enum state will
+	 * also have a transition added which returns to itself.
+	 *
+	 * @param clazz this enum class
+	 * @param includeSelf if true, will also create loops
+	 */
 	public void addAll(Class<T> clazz, boolean includeSelf) {
+		setType(clazz);
+		addAllTransitions(Arrays.asList(clazz.getEnumConstants()), includeSelf);
+	}
+
+	/**
+	 * Set the class of the enum used for this state machine.
+	 * The class is removed from the constructor as a convenience.
+	 * This method MUST be called before an EnumStateMachine can be
+	 * used to resolve named states, via {@link #getState(String)}.
+	 *
+	 * @param clazz the enum class for this state machine
+	 */
+	@Override
+	public void setType(Class<T> clazz) {
 		if (clazz == null || !clazz.isEnum()) {
 			throw new IllegalArgumentException("A valid enum class must be provided.");
 		}
-
-		addAllTransitions(Arrays.asList(clazz.getEnumConstants()), includeSelf);
+		this.genericType = clazz;
 	}
 
 	//---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---//
@@ -74,5 +101,30 @@ public class EnumStateMachine<T extends Enum<T>> extends WrappedStateMachine<Enu
 		public String name() {
 			return value != null ? value.name() : "null";
 		}
+	}
+
+	@Override
+	public T getState(String name) {
+		if (genericType == null) {
+			throw new IllegalStateException("setType must be called before names can be resolved");
+		}
+
+		if (name == null) {
+			throw new IllegalArgumentException("name cannot be null");
+		}
+
+		if (name.equals("null")) {
+			return null;
+		}
+
+		for (T t : genericType.getEnumConstants()) {
+			String enumName = t.name();
+
+			if (enumName.equals(name)) {
+				return t;
+			}
+		}
+
+		throw new RuntimeException("unknown name '"+name+"'");
 	}
 }

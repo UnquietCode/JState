@@ -1,7 +1,6 @@
 package unquietcode.tools.esm;
 
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -14,6 +13,10 @@ public class EnumStateMachine_T {
 
 	enum State {
 		Ready, Running, Paused, Stopping, Stopped, Finished
+	}
+
+	enum Something implements unquietcode.tools.esm.State {
+		One, Two, Three
 	}
 
 	@Test
@@ -46,19 +49,25 @@ public class EnumStateMachine_T {
 		Assert.assertTrue("expected an exception", failed);
 	}
 
-//	@Test
-//	public void stringParsingFromScratch() {
-		// TODO
-//	}
-
 	@Test
-	@Ignore
 	public void stringParsingFromExistingMachine() throws ParseException {
-		EnumStateMachine<State> esm1 = getThreadLikeMachine();
-		String one = esm1.toString();
-		EnumStateMachine<State> esm2 = EnumStringParser.getStateMachine(one);
+		EnumStateMachine<Something> esm1 = new EnumStateMachine<Something>();
 
-		Assert.assertTrue(esm1.equals(esm2));
+		// single
+		esm1.addTransition(Something.One, Something.Two);
+
+		// multiple
+		esm1.addTransition(Something.Two, Something.One);
+		esm1.addTransition(Something.Two, Something.Three);
+
+		// looping
+		esm1.addTransition(Something.Three, Something.Three);
+
+		String stringRepresentation = esm1.toString();
+		EnumStateMachine<Something> esm2 = new EnumStateMachine<Something>();
+		StateMachineStringParser.configureStateMachine(Something.class, stringRepresentation, esm2);
+
+		Assert.assertEquals(stringRepresentation, esm2.toString());
 	}
 
 	@Test

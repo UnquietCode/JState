@@ -30,13 +30,14 @@ import java.util.List;
  * @author  Benjamin Fagin
  * @version 07-06-2013
  */
-public class EnumStringParser {
-	private final StringBuffer buffer;
+public class StateMachineStringParser<V extends State, T extends FactoryStateMachine<V> & ProgrammableStateMachine<V>> {
+	private final StringBuilder buffer;
+	private final T stateMachine;
 
-	private EnumStringParser(StringBuffer buffer) {
+	private StateMachineStringParser(StringBuilder buffer, T stateMachine) {
 		this.buffer = buffer;
+		this.stateMachine = stateMachine;
 	}
-
 
 	/**
 	 * Basic form is:
@@ -52,28 +53,33 @@ public class EnumStringParser {
 	 * @param   string   configuration string
 	 * @throws  ParseException  if the configuration string is malformed
 	 */
-	@SuppressWarnings("unchecked")
-	public static <T extends Enum<T>> EnumStateMachine<T> getStateMachine(String string) throws ParseException {
-		EnumStringParser parser = new EnumStringParser(new StringBuffer(string));
-		return parser.build();
+
+	public static <V extends State, T extends FactoryStateMachine<V> & ProgrammableStateMachine<V>>
+	void configureStateMachine(Class<V> clazz, String string, T stateMachine) throws ParseException {
+		configure(clazz, new StringBuilder(string), stateMachine);
 	}
 
-	@SuppressWarnings("unchecked")
-	public static <T extends Enum<T>> EnumStateMachine<T> getStateMachine(StringBuffer buffer) throws ParseException {
-		EnumStringParser parser = new EnumStringParser(new StringBuffer(buffer));
-		return parser.build();
+	public static <V extends State, T extends FactoryStateMachine<V> & ProgrammableStateMachine<V>>
+	void configureStateMachine(Class<V> clazz, StringBuilder buffer, T stateMachine) throws ParseException {
+		configure(clazz, new StringBuilder(buffer), stateMachine);
+	}
+
+	private static <V extends State, T extends FactoryStateMachine<V> & ProgrammableStateMachine<V>>
+	void configure(Class<V> clazz, StringBuilder buffer, T stateMachine) throws ParseException {
+		StateMachineStringParser<V, T> parser = new StateMachineStringParser<V, T>(buffer, stateMachine);
+		stateMachine.setType(clazz);
+		parser.build();
 	}
 
 	//---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---o---//
 
 	@SuppressWarnings("unchecked")
-	private EnumStateMachine build() throws ParseException {
-		EnumStateMachine esm = new EnumStateMachine();
+	private T build() throws ParseException {
 		eatWhiteSpace();
 
 		String initialString = getString(Token.DIVIDER);
 		if (initialString != null) {
-			esm.setInitialState(instantiate(initialString));
+			stateMachine.setInitialState(instantiate(initialString));
 		}
 
 		while (!isEmpty()) {
@@ -86,15 +92,15 @@ public class EnumStringParser {
 				throw new ParseException("Malformed configuration string.");
 			}
 
-			Enum from = instantiate(name);
+			V from = instantiate(name);
 
 			for (String _to : elements) {
-				Enum to = instantiate(_to);
-				esm.addTransition(from, to);
+				V to = instantiate(_to);
+				stateMachine.addTransition(from, to);
 			}
 		}
 
-		return esm;
+		return stateMachine;
 	}
 
 	// TODO get rid of this with smarter parsing
@@ -215,29 +221,8 @@ public class EnumStringParser {
 		return retval.toArray(new Double[retval.size()]);
 	}
 
-	@SuppressWarnings("unchecked")
-	private Enum instantiate(String string) throws ParseException {
-		if (string.equals("null"))
-			return null;
-
-		int dot = string.lastIndexOf(".");
-
-		if (dot == -1  ||  dot+1 == string.length()) {
-			throw new ParseException("Invalid class string: " + string);
-		}
-
-		String front = string.substring(0, dot).trim();
-		String back = string.substring(dot+1).trim();
-		Enum e;
-
-		try {
-			Class c = Class.forName(front);
-			e = Enum.valueOf(c, back);
-		} catch (ClassNotFoundException ex) {
-			throw new ParseException("Invalid class string: " + front);
-		}
-
-		return e;
+	private V instantiate(String string) throws ParseException {
+		return stateMachine.getState(string);
 	}
 
 	private void eatWhiteSpace() {

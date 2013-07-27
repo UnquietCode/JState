@@ -37,7 +37,22 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 	public WrappedStateMachine(_Type initial) {
 		proxy = new GenericStateMachine<_Wrapper>(wrap(initial));
 	}
-	
+
+	@Override
+	public boolean equals(Object obj) {
+		if (!(obj instanceof WrappedStateMachine)) {
+			return false;
+		}
+
+		WrappedStateMachine other = (WrappedStateMachine) obj;
+		return proxy.equals(other.proxy);
+	}
+
+	@Override
+	public int hashCode() {
+		return proxy.hashCode();
+	}
+
 	//==o==o==o==o==o==o==| helper methods |==o==o==o==o==o==o==//
 	
 	private _Type _unwrap(_Wrapper wrapped) {

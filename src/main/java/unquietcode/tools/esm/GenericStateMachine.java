@@ -456,69 +456,6 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		}
 	}
 
-	/**
-	 * Two state machines are considered equal if they both have the
-	 * same number of states, and the same number of transitions.
-	 *
-	 * The transition actions (entry, exit, and transition callbacks) do
-	 * not count towards equality.
-	 *
-	 * Overall, this is not the fastest method and should be used
-	 * lightly.
-	 */
-	@Override
-	public boolean equals(Object o) {
-		if (o.getClass() != this.getClass()) {
-			return false;
-		}
-
-		@SuppressWarnings("unchecked")
-		GenericStateMachine<State> other = (GenericStateMachine) o;
-
-		if (states.size() != other.states.size()) {
-			return false;
-		}
-
-		for (Map.Entry<StateWrapper, StateContainer> entry : states.entrySet()) {
-			State key = entry.getKey().state;
-
-			if (!other.states.containsKey(key)) {
-				return false;
-			}
-
-			StateContainer tState = entry.getValue();
-			StateContainer oState = other.states.get(key);
-
-			if (tState.transitions.size() != oState.transitions.size()) {
-				return false;
-			}
-
-			for (StateContainer s : tState.transitions.keySet()) {
-				boolean found = false;
-
-				for (StateContainer os : oState.transitions.keySet()) {
-					if (s.state == null) {
-						if (os.state == null) {
-							found = true;
-							break;
-						}
-					} else {
-						if (s.state.equals(os.state)) {
-							found = true;
-							break;
-						}
-					}
-				}
-
-				if (!found) {
-					return false;
-				}
-			}
-		}
-
-		return true;
-	}
-
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
@@ -528,14 +465,19 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		}
 
 		int i = 1;
-		for (Map.Entry<StateWrapper, StateContainer> entry : states.entrySet()) {
+		Map<StateWrapper, StateContainer> sortedStates = new TreeMap<StateWrapper, StateContainer>(states);
+
+		for (Map.Entry<StateWrapper, StateContainer> entry : sortedStates.entrySet()) {
 			sb.append("\t").append(fullString(entry.getKey().state)).append(" : {");
 
 			int j = 1;
-			for (Transition t : entry.getValue().transitions.values()) {
+			Map<StateContainer, Transition> sortedTransitions
+				= new TreeMap<StateContainer, Transition>(entry.getValue().transitions);
+
+			for (Transition t : sortedTransitions.values()) {
 				sb.append(fullString(t.next.state));
 
-				if (j++ != entry.getValue().transitions.size()) {
+				if (j++ != sortedTransitions.size()) {
 					sb.append(", ");
 				}
 			}
@@ -561,7 +503,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		return s;
 	}
 
-	private static class StateContainer {
+	private static class StateContainer implements Comparable<StateContainer> {
 		final State state;
 		final Map<StateContainer, Transition> transitions = new HashMap<StateContainer, Transition>();
 		final Set<StateHandler> entryActions = new HashSet<StateHandler>();
@@ -575,13 +517,27 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		public String toString() {
 			return state != null ? state.name() : "null";
 		}
+
+		@Override
+		public int compareTo(StateContainer other) {
+			String n1 = state == null ? "" : state.name();
+			String n2 = other == null ? "" : other.state.name();
+			return n1.compareTo(n2);
+		}
 	}
 
-	private static class StateWrapper {
+	private static class StateWrapper implements Comparable<StateWrapper> {
 		private final State state;
 
 		StateWrapper(State state) {
 			this.state = state;
+		}
+
+		@Override
+		public int compareTo(StateWrapper other) {
+			String n1 = state == null ? "" : state.name();
+			String n2 = other.state == null ? "" : other.state.name();
+			return n1.compareTo(n2);
 		}
 
 		@Override
@@ -653,6 +609,6 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	}
 
 	private static String fullString(State state) {
-		return state != null ? state.getClass().getName() + "." + state.toString() : null;
+		return state != null ? state.name() : null;
 	}
 }
