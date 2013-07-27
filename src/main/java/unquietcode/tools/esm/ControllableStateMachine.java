@@ -36,8 +36,8 @@ public interface ControllableStateMachine<T> {
 	 * Get the total number of transitions performed by the state machine, since
 	 * construction or the most recent call to {@link #reset()}. Transitions which
 	 * are in progress do not count towards the overall count. In progress means
-	 * that the exit callbacks, transition callbacks, and entry callbacks have all
-	 * been completed for a given transition.
+	 * that the exit callbacks, transition callbacks, and entry callbacks have not
+	 * all been completed.
 	 *
 	 * @return the current number of transitions performed
 	 */
