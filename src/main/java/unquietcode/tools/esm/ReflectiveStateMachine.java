@@ -55,7 +55,8 @@ public abstract class ReflectiveStateMachine extends StringStateMachine {
 	 *
 	 * Usage:
 	 *
-	 * <p>ReflectiveStateMachine sm = new ReflectiveStateMachine() {
+	 * <p>
+     * ReflectiveStateMachine sm = new ReflectiveStateMachine() {
 	 *
 	 *		protected void declareTransitions() {
 	 *			addTransition(null, "blue");
@@ -64,11 +65,10 @@ public abstract class ReflectiveStateMachine extends StringStateMachine {
 	 *		}
 	 *
 	 *		public void onEnteringBlue(String state) {
-	 *			assertEquals("blue", state);
-	 *			enteringBlue.incrementAndGet();
+	 *			System.out.println("in state 'blue'");
 	 *		}
-	 * }</p>
-	 *
+	 * }
+	 * </p>
 	 */
 	protected void declareTransitions() {
 		// children can override to provide functionality
