@@ -43,21 +43,21 @@ states [Ready, Running, Paused, Stopping, Stopped, Finished]. After declaring a 
 set up a new state machine as follows:
 
 ```java
-    enum State {
-        Ready, Running, Paused, Stopping, Stopped, Finished
-    }
+enum State {
+Ready, Running, Paused, Stopping, Stopped, Finished
+}
 
-    ...
-    
-    EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);
-    esm.addTransitions(State.Ready, State.Running, State.Finished);
-    esm.addTransitions(State.Running, State.Paused, State.Stopping);
-    esm.addTransitions(State.Paused, State.Running, State.Stopping);
-    esm.addTransitions(State.Stopping, State.Stopped);
-    esm.addTransitions(State.Stopped, State.Finished);
-    esm.addTransitions(State.Finished, State.Ready, null);
-    
-    esm.transition(State.Running);
+...
+
+EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);
+esm.addTransitions(State.Ready, State.Running, State.Finished);
+esm.addTransitions(State.Running, State.Paused, State.Stopping);
+esm.addTransitions(State.Paused, State.Running, State.Stopping);
+esm.addTransitions(State.Stopping, State.Stopped);
+esm.addTransitions(State.Stopped, State.Finished);
+esm.addTransitions(State.Finished, State.Ready, null);
+
+esm.transition(State.Running);
 ```
 
 The initial state is set either in the constructor or the `setInitialState(...)` method. The `addTransition(...)`
