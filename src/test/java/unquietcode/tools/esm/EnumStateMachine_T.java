@@ -114,7 +114,6 @@ public class EnumStateMachine_T {
 		});
 
 		esm.onExiting(State.Running, new StateHandler<State>() {
-			@Override
 			public void onState(State state) {
 				exited.incrementAndGet();
 			}

@@ -2,13 +2,13 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>unquietcode.tools.esm</groupId>
-	<artifactId>esm</artifactId>
+	<groupId>unquietcode.tools.jstate</groupId>
+	<artifactId>jstate</artifactId>
 	<version>2.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>Enum State Machine</name>
-	<description>A small Java tool which provides simple state machine semantics using enums.</description>
+	<name>JState</name>
+	<description>Advanced state machines in Java.</description>
 	<url>http://maven.apache.org</url>
 
 	<properties>
