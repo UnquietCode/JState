@@ -1,13 +1,12 @@
-# JState (v2.0)
+# Enum State Machine
 A core Java tool which provides state machine semantics using enums, strings, or anything else you
 want to represent the various states. States have transitions which can move them to other states.
 Callbacks are provided for transitions, and for each state when entering or exiting. It is also
 possible to route a transition request based on your own logic. You can even provide a callback
 which will fire when a sequence of states is matched.
 
-This is library is a continuation of work done for [Enum State Machine](https://github.com/UnquietCode/Enum-State-Machine).
-While the original project only suppoted enums, this version allows any type to potentially be used.
-In addition to the `EnumStateMachine` there is also a `ReflectiveStateMachine` worth checking out.
+While the original project only suppoted enums, this version allows any type which implements 
+`State` to be used. There is also a `ReflectiveStateMachine` worth checking out.
 
 All of the methods which modify, transition, or inquire about the state are synchronized, allowing
 multiple threads access to the same state machine. However, to avoid unpredictable behavior, it is
@@ -32,8 +31,8 @@ This is just a flat maven-style file system repo. Just add the following to your
 ...
 
 <dependency>
-    <groupId>unquietcode.tools.jstate</groupId>
-    <artifactId>jstate</artifactId>
+    <groupId>unquietcode.tools.esm</groupId>
+    <artifactId>esm</artifactId>
     <version>2.0</version>
 </dependency>
 ```
@@ -92,7 +91,7 @@ esm.onExiting(State.Running, new StateHandler<State>() {
 });
 ```
 
-`StateRouters` allow you to 'deflect' or 'redirect' a transition based on your own custom logic.
+Routers allow you to 'deflect' or 'redirect' a transition based on your own custom logic.
 ```java
 esm.routeBeforeEntering(TestStates.Three, new StateRouter<TestStates>() {
 	public TestStates route(TestStates current, TestStates next) {
@@ -101,7 +100,7 @@ esm.routeBeforeEntering(TestStates.Three, new StateRouter<TestStates>() {
 });
 ```
 
-`SequenceHandlers` are callbacks which are triggered whenever the specified sequence of states
+Sequence Matchers are callbacks which are triggered whenever the specified sequence of states
 occurs in the state machine.
 ```java
 List<Color> _pattern = Arrays.asList(Color.Blue, Color.Green, Color.Orange);
@@ -157,7 +156,7 @@ sm.transition(null);
 ```
 
 
-See the [tests](src/test/java/unquietcode/tools/esm/EnumStateMachine_T.java)
+See the [tests](https://github.com/UnquietCode/Enum-State-Machine/blob/master/src/test/java/unquietcode/tools/esm/EnumStateMachine_T.java)
 for more usage examples, as well as the provided javadocs.
 
 # License
