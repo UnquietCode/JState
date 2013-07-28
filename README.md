@@ -92,7 +92,7 @@ esm.onExiting(State.Running, new StateHandler<State>() {
 });
 ```
 
-`StateRouter`s allow you to 'deflect' or 'redirect' a transition based on your own custom logic.
+`StateRouters` allow you to 'deflect' or 'redirect' a transition based on your own custom logic.
 ```java
 esm.routeBeforeEntering(TestStates.Three, new StateRouter<TestStates>() {
 	public TestStates route(TestStates current, TestStates next) {
@@ -101,7 +101,7 @@ esm.routeBeforeEntering(TestStates.Three, new StateRouter<TestStates>() {
 });
 ```
 
-`SequenceHandler`s are callbacks which are triggered whenever the specified sequence of states
+`SequenceHandlers` are callbacks which are triggered whenever the specified sequence of states
 occurs in the state machine.
 ```java
 List<Color> _pattern = Arrays.asList(Color.Blue, Color.Green, Color.Orange);
