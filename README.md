@@ -157,7 +157,7 @@ See the [tests](src/test/java/unquietcode/tools/esm/EnumStateMachine_T.java)
 for more usage examples, as well as the provided javadocs.
 
 # License
-ESM is licensed under the MIT license. Go wild.
+JState is licensed under the MIT license. Go wild.
 
 # Questions / Comments / Feedback
 Send an email to blouis@unquietcode.com
