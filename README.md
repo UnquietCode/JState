@@ -157,7 +157,7 @@ sm.transition(null);
 ```
 
 
-See the [tests](https://github.com/UnquietCode/Enum-State-Machine/blob/master/src/test/java/unquietcode/tools/esm/EnumStateMachine_T.java)
+See the [tests](src/test/java/unquietcode/tools/esm/EnumStateMachine_T.java)
 for more usage examples, as well as the provided javadocs.
 
 # License
