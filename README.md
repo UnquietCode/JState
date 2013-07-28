@@ -5,8 +5,9 @@ Callbacks are provided for transitions, and for each state when entering or exit
 possible to route a transition request based on your own logic. You can even provide a callback
 which will fire when a sequence of states is matched.
 
-While the original project only suppoted enums, this version allows any type which implements 
-`State` to be used. There is also a `ReflectiveStateMachine` worth checking out.
+This is library is a continuation of work done for [Enum State Machine](https://github.com/UnquietCode/Enum-State-Machine).
+While the original project only suppoted enums, this version allows any type to potentially be used.
+In addition to the `EnumStateMachine` there is also a `ReflectiveStateMachine` worth checking out.
 
 All of the methods which modify, transition, or inquire about the state are synchronized, allowing
 multiple threads access to the same state machine. However, to avoid unpredictable behavior, it is
