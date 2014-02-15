@@ -109,8 +109,8 @@ sm.onSequence(_pattern, new SequenceHandler<Color>() {
 });
 ```
 
-A special form of StringStateMachine is available as the ReflectiveStateMachine. This flavor allows you to declare
-your callbacks as methods of the state machine class. The arguments are flexible, matching the standalone callback
+A special form of `StringStateMachine` (which uses strings as states) is available as the `ReflectiveStateMachine`.
+This flavor allows you to declare your callbacks as methods of the state machine class. The arguments are flexible, matching the standalone callback
 method's signature and allowing you to skip parameters you don't care about.
 ```java
 ReflectiveStateMachine sm = new ReflectiveStateMachine() {
