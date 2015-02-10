@@ -1,4 +1,7 @@
 # JState (v2.0)
+
+[![Tip with Gratipay](https://assets.gratipay.com/gratipay.svg)](https://gratipay.com/UnquietCode) [![Tip with Bitcoin](https://assets.gratipay.com/bitcoin.png)](https://blockchain.info/address/1Ec6mzLpJQvuzXqhxfJz1h9ZwJmoHMW9BX)**Bitcoin**
+
 A core Java tool which provides state machine semantics using enums, strings, or anything else you
 want to represent the various states. States have transitions which can move them to other states.
 Callbacks are provided for transitions, and for each state when entering or exiting. It is also
