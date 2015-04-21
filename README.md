@@ -15,23 +15,10 @@ EnumStateMachine and StringStateMachine in particular can be serialized to and f
 representations.
 
 # Installation
-The project is build using Maven. Download a stable tag of the project and run
-`mvn install` to install to your local environment. Or you can release the Maven artifact to a shared
-repository for others to use if you would like. OR  you can also use the repository which I host myself.
-This is just a flat maven-style file system repo. Just add the following to your project's POM:
+The project is built using Maven, and the artifacts are available from Maven Central.
 ```
-<repositories>
-    <repository>
-        <id>uqc</id>
-        <name>UnquietCode Repository</name>
-        <url>http://www.unquietcode.com/maven/releases</url>
-    </repository>
-</repositories>
-
-...
-
 <dependency>
-    <groupId>unquietcode.tools.jstate</groupId>
+    <groupId>com.unquietcode.tools.jstate</groupId>
     <artifactId>jstate</artifactId>
     <version>2.0</version>
 </dependency>
