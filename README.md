@@ -15,7 +15,9 @@ EnumStateMachine and StringStateMachine in particular can be serialized to and f
 representations.
 
 # Installation
-The project is built using Maven, and the artifacts are available from Maven Central.
+The project is built using Maven, and the artifacts are available from Maven Central. (If you
+are a current user of the tool, note that the group name has changed to accommodate Sonatype's
+repository hosting requirements.)
 ```
 <dependency>
     <groupId>com.unquietcode.tools.jstate</groupId>
