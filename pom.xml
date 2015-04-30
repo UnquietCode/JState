@@ -5,7 +5,7 @@
 	<groupId>com.unquietcode.tools.jstate</groupId>
 	<artifactId>jstate</artifactId>
 	<version>2.1-SNAPSHOT</version>
-	<packaging>jar</packaging>
+	<packaging>bundle</packaging>
 
 	<name>JState</name>
 	<description>Advanced state machines in Java.</description>
@@ -25,6 +25,12 @@
 
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<version>2.5.4</version>
+				<extensions>true</extensions>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
