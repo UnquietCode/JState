@@ -28,8 +28,11 @@ repository hosting requirements.)
 
 # Usage
 A typical use case might be a state machine for controlling a process, which can move between the
-states [Ready, Running, Paused, Stopping, Stopped, Finished]. After declaring a state enum we can
-set up a new state machine as follows:
+states [Ready, Running, Paused, Stopping, Stopped, Finished].
+
+![State Diagram](http://www.unquietcode.com/e_e/JState_diagram1.png)
+
+After declaring a state enum we can set up a new state machine as follows:
 
 ```java
 enum State {
