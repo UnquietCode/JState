@@ -118,7 +118,7 @@ ReflectiveStateMachine sm = new ReflectiveStateMachine() {
 	}
 
 	public void onEnteringBlue(String state) {
-		exitingBlue.incrementAndGet();
+		enteringBlue.incrementAndGet();
 	}
 
 	public void onExitingBlue() {
