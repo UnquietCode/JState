@@ -28,7 +28,7 @@ repository hosting requirements.)
 
 # Usage
 A typical use case might be a state machine for controlling a process, which can move between the
-states [Ready, Running, Paused, Stopping, Stopped, Finished].
+states [`Ready`, `Running`, `Paused`, `Stopping`, `Stopped`, `Finished`].
 
 ![State Diagram](./example-diagram.png)
 
