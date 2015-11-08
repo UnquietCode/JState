@@ -30,7 +30,7 @@ repository hosting requirements.)
 A typical use case might be a state machine for controlling a process, which can move between the
 states [Ready, Running, Paused, Stopping, Stopped, Finished].
 
-![State Diagram](http://www.unquietcode.com/e_e/JState_diagram1.png)
+![State Diagram](./example-diagram.png)
 
 After declaring a state enum we can set up a new state machine as follows:
 
