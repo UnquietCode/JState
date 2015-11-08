@@ -72,15 +72,21 @@ public class Reflective_T {
 		assertEquals(3, transitionAny.get());
 	}
 
-	@Test(expected=UnsupportedOperationException.class)
+	@Test(expected=CustomException.class)
 	public void testException() {
 		ReflectiveStateMachine sm = new ReflectiveStateMachine() {
 			public void onBlue() {
-				throw new UnsupportedOperationException("error");
+				throw new CustomException("error");
 			}
 		};
 
 		sm.addTransition(null, "blue");
 		sm.transition("blue");
+	}
+
+	private static class CustomException extends RuntimeException {
+		public CustomException(String msg) {
+			super(msg);
+		}
 	}
 }
