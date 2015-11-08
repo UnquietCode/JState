@@ -44,11 +44,6 @@ public abstract class ReflectiveStateMachine extends StringStateMachine {
 		init();
 	}
 
-	private void init() {
-		discover();
-		declareTransitions();
-	}
-
 	/**
 	 * A convenience method which can be used to declare transitions inline at
 	 * the time that the class is created, which supports anonymous instances.
@@ -72,6 +67,11 @@ public abstract class ReflectiveStateMachine extends StringStateMachine {
 	 */
 	protected void declareTransitions() {
 		// children can override to provide functionality
+	}
+
+	private void init() {
+		discover();
+		declareTransitions();
 	}
 
 	private void discover() {

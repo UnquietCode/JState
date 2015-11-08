@@ -27,8 +27,8 @@ import java.util.*;
 
 
 /**
- * Note that null is a valid state
- * in this system. The initial starting point is null by default.
+ * Note that null is a valid state in this system, and
+ * the initial starting point is null by default.
  *
  * @author  Benjamin Fagin
  * @version 12-23-2010
