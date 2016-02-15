@@ -1,4 +1,4 @@
-# JState (v2.0)
+# JState (v2.1)
 
 [![Tip with Gratipay](https://assets.gratipay.com/gratipay.svg)](https://gratipay.com/UnquietCode) [![Tip with Bitcoin](http://www.unquietcode.com/e_e/bitcoin.png)](https://blockchain.info/address/1Ec6mzLpJQvuzXqhxfJz1h9ZwJmoHMW9BX)**Bitcoin**
 
@@ -22,7 +22,7 @@ repository hosting requirements.)
 <dependency>
     <groupId>com.unquietcode.tools.jstate</groupId>
     <artifactId>jstate</artifactId>
-    <version>2.0</version>
+    <version>2.1</version>
 </dependency>
 ```
 
