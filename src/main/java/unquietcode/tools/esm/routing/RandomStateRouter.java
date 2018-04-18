@@ -36,35 +36,34 @@ import static java.util.Objects.requireNonNull;
  */
 public class RandomStateRouter<T> implements StateRouter<T> {
 	private final SecureRandom randomGenerator = new SecureRandom();
-	private final List<StateRouter<T>> routers;
+	private final List<T> states;
 
-	public RandomStateRouter(Set<StateRouter<T>> routers) {
-		this.routers = new ArrayList<>(requireNonNull(routers));
+	public RandomStateRouter(Set<T> states) {
+		this.states = new ArrayList<>(requireNonNull(states));
 
 		// seems like a good idea to shuffle it once beforehand
-		Collections.shuffle(this.routers);
+		Collections.shuffle(this.states);
 	}
 
 	@SafeVarargs
-	public RandomStateRouter(StateRouter<T>...routers) {
-		this(newIdentitySet(Arrays.asList(requireNonNull(routers))));
+	public RandomStateRouter(T...states) {
+		this(newIdentitySet(Arrays.asList(requireNonNull(states))));
 	}
 
 	@Override
 	public synchronized T route(T current, T next) {
-		if (routers.isEmpty()) {
+		if (states.isEmpty()) {
 			return next;
 		}
 
-		// find the next router by randomly selecting one from the list
-		int nextRouter = randomGenerator.nextInt(routers.size());
-		StateRouter<T> router = routers.get(nextRouter);
+		// find the next state by randomly selecting one from the list
+		int nextState = randomGenerator.nextInt(states.size());
 
-		return router.route(current, next);
+		return states.get(nextState);
 	}
 
-	private static <T> Set<StateRouter<T>> newIdentitySet(Collection<StateRouter<T>> items) {
-		Set<StateRouter<T>> set = Collections.newSetFromMap(new IdentityHashMap<>());
+	private static <T> Set<T> newIdentitySet(Collection<T> items) {
+		Set<T> set = Collections.newSetFromMap(new IdentityHashMap<>());
 		set.addAll(items);
 		return set;
 	}

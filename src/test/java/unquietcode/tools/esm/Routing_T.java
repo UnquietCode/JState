@@ -17,12 +17,12 @@ public class Routing_T {
 
 	@Test
 	public void testSimpleRedirect() {
+		EnumStateMachine<TestStates> esm = new EnumStateMachine<>(TestStates.One);
+		esm.addAll(TestStates.class, true);
+
 		final AtomicInteger c1 = new AtomicInteger(0);
 		final AtomicInteger c2 = new AtomicInteger(0);
 		final AtomicInteger c3 = new AtomicInteger(0);
-
-		EnumStateMachine<TestStates> esm = new EnumStateMachine<>(TestStates.One);
-		esm.addAll(TestStates.class, true);
 
 		esm.onEntering(TestStates.One, state -> c1.incrementAndGet());
 
@@ -51,36 +51,24 @@ public class Routing_T {
 		EnumStateMachine<TestStates> esm = new EnumStateMachine<TestStates>(TestStates.One);
 		esm.addAll(TestStates.class, true);
 
+		final AtomicInteger c1 = new AtomicInteger(0);
+		final AtomicInteger c2 = new AtomicInteger(0);
 		final AtomicInteger c3 = new AtomicInteger(0);
+
+		esm.onEntering(TestStates.One, state -> c1.incrementAndGet());
+		esm.onEntering(TestStates.Two, state -> c2.incrementAndGet());
 		esm.onEntering(TestStates.Three, state -> c3.incrementAndGet());
 
-		final AtomicInteger r1 = new AtomicInteger(0);
-		final AtomicInteger r2 = new AtomicInteger(0);
-		final AtomicInteger r3 = new AtomicInteger(0);
-
-		StateRouter<TestStates> router1 = (current, next) -> {
-			r1.incrementAndGet();
-			return next;
-		};
-		StateRouter<TestStates> router2 = (current, next) -> {
-			r2.incrementAndGet();
-			return next;
-		};
-		StateRouter<TestStates> router3 = (current, next) -> {
-			r3.incrementAndGet();
-			return next;
-		};
-
-		esm.routeBeforeEntering(TestStates.Three, new RoundRobinStateRouter<>(router1, router2, router3));
+		RoundRobinStateRouter<TestStates> router = new RoundRobinStateRouter<>(TestStates.One, TestStates.Two, TestStates.Three);
+		esm.routeBeforeEntering(TestStates.Three, router);
 
 		for (int i=0; i < 12; ++i) {
 			esm.transition(TestStates.Three);
 		}
 
-		assertEquals(12, c3.get());
-		assertEquals(4, r1.get());
-		assertEquals(4, r2.get());
-		assertEquals(4, r3.get());
+		assertEquals(4, c1.get());
+		assertEquals(4, c2.get());
+		assertEquals(4, c3.get());
 	}
 
 	@Test
@@ -88,27 +76,16 @@ public class Routing_T {
 		EnumStateMachine<TestStates> esm = new EnumStateMachine<>(TestStates.One);
 		esm.addAll(TestStates.class, true);
 
+		final AtomicInteger c1 = new AtomicInteger(0);
+		final AtomicInteger c2 = new AtomicInteger(0);
 		final AtomicInteger c3 = new AtomicInteger(0);
+
+		esm.onEntering(TestStates.One, state -> c1.incrementAndGet());
+		esm.onEntering(TestStates.Two, state -> c2.incrementAndGet());
 		esm.onEntering(TestStates.Three, state -> c3.incrementAndGet());
 
-		final AtomicInteger r1 = new AtomicInteger(0);
-		final AtomicInteger r2 = new AtomicInteger(0);
-		final AtomicInteger r3 = new AtomicInteger(0);
-
-		StateRouter<TestStates> router1 = (current, next) -> {
-			r1.incrementAndGet();
-			return next;
-		};
-		StateRouter<TestStates> router2 = (current, next) -> {
-			r2.incrementAndGet();
-			return next;
-		};
-		StateRouter<TestStates> router3 = (current, next) -> {
-			r3.incrementAndGet();
-			return next;
-		};
-
-		esm.routeBeforeEntering(TestStates.Three, new RandomStateRouter<>(router1, router2, router3));
+		RandomStateRouter<TestStates> router = new RandomStateRouter<>(TestStates.One, TestStates.Two, TestStates.Three);
+		esm.routeBeforeEntering(TestStates.Three, router);
 
 		final int sampleCount = 1000;
 
@@ -118,14 +95,13 @@ public class Routing_T {
 		}
 
 		// the sum should be the sample size
-		assertEquals(sampleCount, c3.get());
-		assertEquals(sampleCount, r1.get() + r2.get() + r3.get());
+		assertEquals(sampleCount, c1.get() + c2.get() + c3.get());
 
 		// the difference should less than 10%
 		final int epsilon = (int) (0.1 * sampleCount);
-		assertTrue(Math.abs(r1.get()-r2.get()) < epsilon);
-		assertTrue(Math.abs(r2.get()-r3.get()) < epsilon);
-		assertTrue(Math.abs(r3.get()-r1.get()) < epsilon);
+		assertTrue(Math.abs(c1.get()-c2.get()) < epsilon);
+		assertTrue(Math.abs(c2.get()-c3.get()) < epsilon);
+		assertTrue(Math.abs(c3.get()-c1.get()) < epsilon);
 	}
 
 	@Test(expected=TransitionException.class)

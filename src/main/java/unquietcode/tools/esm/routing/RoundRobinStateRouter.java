@@ -36,33 +36,33 @@ import static java.util.Objects.requireNonNull;
  * @version 2018-04-18
  */
 public class RoundRobinStateRouter<T> implements StateRouter<T> {
-	private final List<StateRouter<T>> routers;
-	private int nextRouter = 0;
+	private final List<T> states;
+	private int nextState = 0;
 
-	public RoundRobinStateRouter(List<StateRouter<T>> routers) {
-		this.routers = new ArrayList<>(requireNonNull(routers));
+	public RoundRobinStateRouter(List<T> states) {
+		this.states = new ArrayList<>(requireNonNull(states));
 	}
 
 	@SafeVarargs
-	public RoundRobinStateRouter(StateRouter<T>...routers) {
-		this(Arrays.asList(requireNonNull(routers)));
+	public RoundRobinStateRouter(T... states) {
+		this(Arrays.asList(requireNonNull(states)));
 	}
 
 	@Override
 	public synchronized T route(T current, T next) {
-		if (routers.isEmpty()) {
+		if (states.isEmpty()) {
 			return next;
 		}
 
-		final StateRouter<T> router = routers.get(nextRouter);
+		final T state = states.get(nextState);
 
-		// increment the router number or rotate back to 0
-		if (nextRouter == routers.size() - 1) {
-			nextRouter = 0;
+		// increment the state number or rotate back to 0
+		if (nextState == states.size() - 1) {
+			nextState = 0;
 		} else {
-			nextRouter += 1;
+			nextState += 1;
 		}
 
-		return router.route(current, next);
+		return state;
 	}
 }
