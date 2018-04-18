@@ -1,0 +1,68 @@
+/*******************************************************************************
+ The MIT License (MIT)
+
+ Copyright (c) 2018 Benjamin Fagin
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy of
+ this software and associated documentation files (the "Software"), to deal in
+ the Software without restriction, including without limitation the rights to
+ use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ the Software, and to permit persons to whom the Software is furnished to do so,
+ subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ ******************************************************************************/
+
+package unquietcode.tools.esm.routing;
+
+import unquietcode.tools.esm.StateRouter;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import static java.util.Objects.requireNonNull;
+
+/**
+ * @author Ben Fagin
+ * @version 2018-04-18
+ */
+public class RoundRobinStateRouter<T> implements StateRouter<T> {
+	private final List<StateRouter<T>> routers;
+	private int nextRouter = 0;
+
+	public RoundRobinStateRouter(List<StateRouter<T>> routers) {
+		this.routers = new ArrayList<>(requireNonNull(routers));
+	}
+
+	@SafeVarargs
+	public RoundRobinStateRouter(StateRouter<T>...routers) {
+		this(Arrays.asList(requireNonNull(routers)));
+	}
+
+	@Override
+	public synchronized T route(T current, T next) {
+		if (routers.isEmpty()) {
+			return next;
+		}
+
+		final StateRouter<T> router = routers.get(nextRouter);
+
+		// increment the router number or rotate back to 0
+		if (nextRouter == routers.size() - 1) {
+			nextRouter = 0;
+		} else {
+			nextRouter += 1;
+		}
+
+		return router.route(current, next);
+	}
+}
