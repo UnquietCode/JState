@@ -3,6 +3,7 @@ package unquietcode.tools.esm;
 import org.junit.Test;
 import unquietcode.tools.esm.routing.RandomStateRouter;
 import unquietcode.tools.esm.routing.RoundRobinStateRouter;
+import unquietcode.tools.esm.routing.StateRouter;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

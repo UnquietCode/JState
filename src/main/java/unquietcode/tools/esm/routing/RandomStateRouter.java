@@ -23,8 +23,6 @@
 
 package unquietcode.tools.esm.routing;
 
-import unquietcode.tools.esm.StateRouter;
-
 import java.security.SecureRandom;
 import java.util.*;
 

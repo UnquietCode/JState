@@ -1,7 +1,7 @@
 /*******************************************************************************
  The MIT License (MIT)
 
- Copyright (c) 2013 Benjamin Fagin
+ Copyright (c) 2018 Benjamin Fagin
 
  Permission is hereby granted, free of charge, to any person obtaining a copy of
  this software and associated documentation files (the "Software"), to deal in
@@ -21,7 +21,9 @@
  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-package unquietcode.tools.esm;
+package unquietcode.tools.esm.routing;
+
+import unquietcode.tools.esm.HandlerRegistration;
 
 /**
  * @author Ben Fagin

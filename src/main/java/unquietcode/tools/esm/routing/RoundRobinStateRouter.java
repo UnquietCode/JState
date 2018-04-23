@@ -23,8 +23,6 @@
 
 package unquietcode.tools.esm.routing;
 
-import unquietcode.tools.esm.StateRouter;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

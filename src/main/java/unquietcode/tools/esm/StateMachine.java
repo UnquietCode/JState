@@ -23,6 +23,8 @@
 
 package unquietcode.tools.esm;
 
+import unquietcode.tools.esm.routing.RoutableStateMachine;
+
 /**
  * @author Ben Fagin
  * @version 2013-07-08
