@@ -3,6 +3,9 @@ package unquietcode.tools.esm;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -204,7 +207,79 @@ public class EnumStateMachine_T {
 		esm.transition(State.Ready);   // exception!
 	}
 
-	// ---------- //
+	@Test
+	public void transitionAsync() {
+		final EnumStateMachine<State> esm = getThreadLikeMachine();
+		final AtomicInteger counter = new AtomicInteger();
+		final int SLEEP_MS = 200;
+
+		esm.onTransition((from, to) -> {
+			try {
+				Thread.sleep(SLEEP_MS);
+			} catch (InterruptedException e) {
+				Assert.fail(e.toString());
+			}
+			counter.incrementAndGet();
+		});
+
+		esm.transitionAsync(State.Running);
+		Assert.assertEquals(0, counter.get());
+
+		try {
+			Thread.sleep(SLEEP_MS * 2);
+		} catch (InterruptedException e) {
+			Assert.fail();
+		}
+		Assert.assertEquals(1, counter.get());
+
+		esm.transitionAsync(State.Paused);
+		Assert.assertEquals(1, counter.get());
+
+		try {
+			Thread.sleep(SLEEP_MS * 2);
+		} catch (InterruptedException e) {
+			Assert.fail();
+		}
+		Assert.assertEquals(2, counter.get());
+	}
+
+	@Test
+	public void transitionAsyncWithFailure() {
+		final EnumStateMachine<State> esm = getThreadLikeMachine();
+		final int SLEEP_MS = 200;
+
+		esm.onTransition((from, to) -> {
+			try {
+				Thread.sleep(SLEEP_MS);
+			} catch (InterruptedException e) {
+				Assert.fail(e.toString());
+			}
+			throw new TransitionException("transition failed");
+		});
+
+		Future<Boolean> t1 = esm.transitionAsync(State.Running);
+		Future<Boolean> t2 = esm.transitionAsync(State.Paused);
+
+		try {
+			Thread.sleep(SLEEP_MS * 2);
+		} catch (InterruptedException e) {
+			Assert.fail();
+		}
+
+		try {
+			t1.get();
+		} catch (InterruptedException e) {
+			Assert.fail();
+		} catch (ExecutionException e) {
+			Assert.assertTrue(e.getCause() instanceof TransitionException);
+		}
+
+		Assert.assertEquals(State.Ready, esm.currentState());
+		Assert.assertTrue(t2.isCancelled());
+	}
+
+
+	// ---------------------------------------------------------- //
 
 	private EnumStateMachine<State> getThreadLikeMachine() {
 		EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);

@@ -23,6 +23,8 @@
 
 package unquietcode.tools.esm;
 
+import java.util.concurrent.Future;
+
 /**
  * Provides methods for controlling a state machine without providing direct access to the
  * underlying object. Essentially an immutable {@link EnumStateMachine} instance.
@@ -52,6 +54,17 @@ public interface ControllableStateMachine<T> {
 	 * @throws TransitionException if a violation of the available transitions occurs
 	 */
 	boolean transition(T state) throws TransitionException;
+
+	/**
+	 * Transition the state machine to the next state asynchronously. Transitions occur
+	 * in the order in which they are issued. When an error occurs, all pending
+	 * transitions will be cancelled.
+	 *
+	 * @param state to transition to
+	 * @return a future which will resolve when the transition occurs
+	 * @throws TransitionException
+	 */
+	Future<Boolean> transitionAsync(T state) throws TransitionException;
 
 	/**
 	 * Returns the current state for this state machine.

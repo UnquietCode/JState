@@ -24,6 +24,7 @@
 package unquietcode.tools.esm;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 
 /**
@@ -36,6 +37,7 @@ import java.util.*;
 public class GenericStateMachine<T extends State> implements StateMachine<T> {
 
 	// states, and the routers that route them
+	private ExecutorService executor = _newExecutor();
 	private final Map<StateWrapper, StateContainer> states = new HashMap<StateWrapper, StateContainer>();
 	private final List<StateRouter<T>> routers = new ArrayList<StateRouter<T>>();
 
@@ -54,6 +56,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	private StateContainer current;
 	private long transitions;
 
+
 	public GenericStateMachine() {
 		this(null);
 	}
@@ -65,21 +68,64 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 
 	@Override
 	public synchronized void reset() {
+
+		// wait for all tasks to finish first
+		executor.shutdown();
+
 		transitions = 0;
 		current = initial;
 		recentStates.clear();
+		executor = _newExecutor();
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public synchronized boolean transition(final T next) {
+	public synchronized boolean transition(final T next) throws TransitionException {
+		Future<Boolean> result = transitionAsync(next);
+
+		try {
+			return result.get();
+		} catch (InterruptedException e) {
+			throw new TransitionException(e);
+		} catch (ExecutionException e) {
+			if (e.getCause() instanceof RuntimeException) {
+				throw (RuntimeException) e.getCause();
+			} else {
+				throw new TransitionException(e.getCause());
+			}
+		}
+	}
+
+	@Override
+	public synchronized Future<Boolean> transitionAsync(final T next) throws TransitionException {
 		final StateContainer requestedState = getState(next);
 		final StateContainer nextState = route(next, requestedState);
 
-		if (!current.transitions.containsKey(nextState)) {
- 			throw new TransitionException("No transition exists between "+ current +" and "+ requestedState);
-		}
+		Callable<Boolean> callable = () -> {
+			if (!current.transitions.containsKey(nextState)) {
+				throw new TransitionException("No transition exists between "+ current +" and "+ requestedState);
+			}
 
+			try {
+				return _transition(nextState);
+			} catch (Exception e) {  // TODO maybe scope this to only our own exception types
+				List<Runnable> unfinished = executor.shutdownNow();
+
+				for (Runnable runnable : unfinished) {
+					if (runnable instanceof Future) {
+						((Future) runnable).cancel(true);
+					}
+				}
+
+				executor = _newExecutor();
+				throw e;
+			}
+		};
+
+		return executor.submit(callable);
+	}
+
+	private boolean _transition(final StateContainer nextState) {
 		onExit();
 		onTransition(nextState);
 		onEntry(nextState);
@@ -265,7 +311,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	}
 
 	@Override
-	public HandlerRegistration onTransition(final TransitionHandler<T> callback) {
+	public synchronized HandlerRegistration onTransition(final TransitionHandler<T> callback) {
 		globalOnTransitionHandlers.add(callback);
 
 		return new HandlerRegistration() {
@@ -610,5 +656,9 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 
 	private static String fullString(State state) {
 		return state != null ? state.name() : null;
+	}
+
+	private static ExecutorService _newExecutor() {
+		return Executors.newSingleThreadExecutor();
 	}
 }

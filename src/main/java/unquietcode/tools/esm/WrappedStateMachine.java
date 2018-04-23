@@ -24,6 +24,7 @@
 package unquietcode.tools.esm;
 
 import java.util.*;
+import java.util.concurrent.Future;
 
 
 public abstract class WrappedStateMachine<_Wrapper extends State, _Type> implements StateMachine<_Type> {
@@ -91,6 +92,11 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 	@Override
 	public boolean transition(_Type state) {
 		return proxy.transition(_wrap(state));
+	}
+
+	@Override
+	public Future<Boolean> transitionAsync(_Type state) throws TransitionException {
+		return proxy.transitionAsync(_wrap(state));
 	}
 
 	@Override
