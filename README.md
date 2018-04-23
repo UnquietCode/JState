@@ -1,4 +1,4 @@
-# JState (v2.1) [![Build Status](https://travis-ci.org/UnquietCode/JState.png?branch=master)](https://travis-ci.org/UnquietCode/Flapi)
+# JState (v2.1) [![Build Status](https://travis-ci.org/UnquietCode/JState.png?branch=master)](https://travis-ci.org/UnquietCode/JState)
 A core Java tool which provides state machine semantics using enums, strings, or anything else you
 want to represent the various states. States have transitions which can move them to other states.
 Callbacks are provided for transitions, and for each state when entering or exiting. It is also
