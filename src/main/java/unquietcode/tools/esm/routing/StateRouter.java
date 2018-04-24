@@ -29,6 +29,7 @@ import unquietcode.tools.esm.StateMachine;
  * @author Ben Fagin
  * @version 2013-07-07
  */
+@FunctionalInterface
 public interface StateRouter<T> {
 
 	/**

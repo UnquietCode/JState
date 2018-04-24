@@ -29,6 +29,7 @@ import java.util.List;
  * @author Ben Fagin
  * @version 2013-07-08
  */
+@FunctionalInterface
 public interface SequenceHandler<T> {
 
 	/**
