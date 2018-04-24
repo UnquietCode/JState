@@ -34,11 +34,11 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 	private final Map<_Type, _Wrapper> wrapperCache = new HashMap<_Type, _Wrapper>();
 	
 	public WrappedStateMachine() {
-		proxy = new GenericStateMachine<_Wrapper>();
+		proxy = new GenericStateMachine<>();
 	}
 
 	public WrappedStateMachine(_Type initial) {
-		proxy = new GenericStateMachine<_Wrapper>(wrap(initial));
+		proxy = new GenericStateMachine<>(wrap(initial));
 	}
 
 	@Override
@@ -112,7 +112,7 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 	}
 
 	@Override
-	public synchronized void setInitialState(_Type state) {
+	public void setInitialState(_Type state) {
 		proxy.setInitialState(_wrap(state));
 	}
 
@@ -315,7 +315,6 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 			return callback.equals(other.callback);
 		}
 	}
-
 
 	private class TransitionCallbackWrapper implements TransitionHandler<_Wrapper> {
 		private final TransitionHandler<_Type> callback;

@@ -63,12 +63,12 @@ public class StringStateMachine extends WrappedStateMachine<StringStateMachine.S
 	}
 
 	@Override
-	public void setType(Class<String> clazz) {
+	public final void setType(Class<String> clazz) {
 		// nothing
 	}
 
 	@Override
-	public String getState(String name) {
+	public final String getState(String name) {
 		if (name == null) {
 			throw new IllegalArgumentException("name cannot be null");
 		}

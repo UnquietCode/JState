@@ -70,11 +70,12 @@ public abstract class ReflectiveStateMachine extends StringStateMachine {
 	}
 
 	private void init() {
-		discover();
+		discoverMethods();
 		declareTransitions();
 	}
 
-	private void discover() {
+	private void discoverMethods() {
+
 		// build a map, ensure no duplicate names
 		Map<String, Method> methodMap = new HashMap<String, Method>();
 
