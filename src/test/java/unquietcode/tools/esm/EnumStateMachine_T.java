@@ -54,7 +54,7 @@ public class EnumStateMachine_T {
 
 	@Test
 	public void stringParsingFromExistingEnumMachine() throws ParseException {
-		EnumStateMachine<Something> esm1 = new EnumStateMachine<Something>();
+		EnumStateMachine<Something> esm1 = new EnumStateMachine<>();
 
 		// single
 		esm1.addTransition(Something.One, Something.Two);
@@ -67,7 +67,7 @@ public class EnumStateMachine_T {
 		esm1.addTransition(Something.Three, Something.Three);
 
 		String stringRepresentation = esm1.toString();
-		EnumStateMachine<Something> esm2 = new EnumStateMachine<Something>();
+		EnumStateMachine<Something> esm2 = new EnumStateMachine<>();
 		StateMachineStringParser.configureStateMachine(Something.class, stringRepresentation, esm2);
 
 		Assert.assertEquals(stringRepresentation, esm2.toString());
@@ -100,27 +100,15 @@ public class EnumStateMachine_T {
 		final AtomicInteger exited = new AtomicInteger(0);
 		final AtomicInteger transitioned = new AtomicInteger(0);
 
-		TransitionHandler<State> cb = new TransitionHandler<State>() {
-			public void onTransition(State from, State to) {
-				transitioned.incrementAndGet();
-			}
-		};
+		TransitionHandler<State> cb = (from, to) -> transitioned.incrementAndGet();
 
 		EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);
 		esm.addTransitions(cb, State.Ready, State.Running);
 		esm.addTransitions(cb, State.Running, State.Stopped);
 
-		esm.onEntering(State.Running, new StateHandler<State>() {
-			public void onState(State state) {
-				entered.incrementAndGet();
-			}
-		});
+		esm.onEntering(State.Running, state -> entered.incrementAndGet());
 
-		esm.onExiting(State.Running, new StateHandler<State>() {
-			public void onState(State state) {
-				exited.incrementAndGet();
-			}
-		});
+		esm.onExiting(State.Running, state -> exited.incrementAndGet());
 
 		esm.transition(State.Running);
 		Assert.assertEquals("expected transitions", 1, transitioned.intValue());
@@ -138,11 +126,7 @@ public class EnumStateMachine_T {
 	public void transitionCallback() {
 		final AtomicInteger counter = new AtomicInteger(0);
 
-		TransitionHandler<State> cb = new TransitionHandler<State>() {
-			public void onTransition(State from, State to) {
-				counter.incrementAndGet();
-			}
-		};
+		TransitionHandler<State> cb = (from, to) -> counter.incrementAndGet();
 
 		EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);
 		esm.addTransitions(cb, State.Ready, State.Running);
@@ -155,11 +139,7 @@ public class EnumStateMachine_T {
 	public void duplicateTransitionCallback() {
 		final AtomicInteger counter = new AtomicInteger(0);
 
-		TransitionHandler<State> cb = new TransitionHandler<State>() {
-			public void onTransition(State from, State to) {
-				counter.incrementAndGet();
-			}
-		};
+		TransitionHandler<State> cb = (from, to) -> counter.incrementAndGet();
 
 		EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);
 		esm.addTransitions(cb, State.Ready, State.Running);
@@ -173,11 +153,7 @@ public class EnumStateMachine_T {
 	public void multiUseTransitionCallback() {
 		final AtomicInteger counter = new AtomicInteger(0);
 
-		TransitionHandler<State> cb = new TransitionHandler<State>() {
-			public void onTransition(State from, State to) {
-				counter.incrementAndGet();
-			}
-		};
+		TransitionHandler<State> cb = (from, to) -> counter.incrementAndGet();
 
 		EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);
 		esm.addTransitions(cb, State.Ready, State.Running);
@@ -282,7 +258,7 @@ public class EnumStateMachine_T {
 	// ---------------------------------------------------------- //
 
 	private EnumStateMachine<State> getThreadLikeMachine() {
-		EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);
+		EnumStateMachine<State> esm = new EnumStateMachine<>(State.Ready);
 		esm.addTransitions(State.Ready, State.Running, State.Finished);
 		esm.addTransitions(State.Running, State.Paused, State.Stopping);
 		esm.addTransitions(State.Paused, State.Running, State.Stopping);

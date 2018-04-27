@@ -19,11 +19,7 @@ public class String_T {
 		StateMachine<String> sm = new StringStateMachine();
 
 		sm.addTransition(null, "hello");
-		sm.addTransition("hello", "world", new TransitionHandler<String>() {
-			public void onTransition(String from, String to) {
-				cur.set(to);
-			}
-		});
+		sm.addTransition("hello", "world", (from, to) -> cur.set(to));
 		sm.addTransition("world", "goodbye ");
 		sm.addTransition("GOODBYE", null);
 

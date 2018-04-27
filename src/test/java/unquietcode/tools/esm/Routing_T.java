@@ -3,7 +3,6 @@ package unquietcode.tools.esm;
 import org.junit.Test;
 import unquietcode.tools.esm.routing.RandomStateRouter;
 import unquietcode.tools.esm.routing.RoundRobinStateRouter;
-import unquietcode.tools.esm.routing.StateRouter;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,11 +30,9 @@ public class Routing_T {
 
 		esm.onEntering(TestStates.Three, state -> c3.incrementAndGet());
 
-		esm.routeBeforeEntering(TestStates.Three, new StateRouter<TestStates>() {
-			public TestStates route(TestStates current, TestStates next) {
-				assertEquals(next, TestStates.Three);
-				return TestStates.Two;
-			}
+		esm.routeBeforeEntering(TestStates.Three, (current, next) -> {
+			assertEquals(next, TestStates.Three);
+			return TestStates.Two;
 		});
 
 		esm.transition(TestStates.One);
@@ -49,7 +46,7 @@ public class Routing_T {
 
 	@Test
 	public void testRoundRobinRedirect() {
-		EnumStateMachine<TestStates> esm = new EnumStateMachine<TestStates>(TestStates.One);
+		EnumStateMachine<TestStates> esm = new EnumStateMachine<>(TestStates.One);
 		esm.addAll(TestStates.class, true);
 
 		final AtomicInteger c1 = new AtomicInteger(0);
@@ -112,11 +109,7 @@ public class Routing_T {
 		esm.addTransition(TestStates.One, TestStates.Two);
 
 		// this should cause a failure, One -> Three not valid
-		esm.routeAfterExiting(TestStates.One, new StateRouter<TestStates>() {
-			public TestStates route(TestStates current, TestStates next) {
-				return TestStates.Three;
-			}
-		});
+		esm.routeAfterExiting(TestStates.One, (current, next) -> TestStates.Three);
 
 		esm.transition(TestStates.One);
 		esm.transition(TestStates.Two);
