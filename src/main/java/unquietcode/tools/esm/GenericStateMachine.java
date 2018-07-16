@@ -160,7 +160,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 			= Collections.unmodifiableList(new ArrayList<>(recentStates));
 
 		for (PatternMatcher matcher : matchers) {
-			if (matcher.matches(recent.iterator(), recent.size())) {
+			if (matcher.matches(recent)) {
 				matcher.handler.onMatch(matcher.pattern);
 			}
 		}
@@ -644,21 +644,24 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 			this.handler = handler;
 		}
 
-		boolean matches(Iterator<StateContainer> it, int size) {
-			if (size < pattern.size()) {
-				return false;
-			}
+		boolean matches(List<StateContainer> states) {
+			for (int i = pattern.size() - 1; i >= 0; --i) {
+				int j = states.size() - (pattern.size() - i);
 
-			for (State state : pattern) {
-				State nextState = it.next().state;
+				if (j < 0) {
+					return false;
+				}
 
-				if (state == null) {
-					if (nextState != null) {
+				State matchState = pattern.get(i);
+				State recentState = states.get(j).state;
+
+				if (matchState == null) {
+					if (recentState != null) {
 						return false;
 					}
-				} else if (nextState == null) {
+				} else if (recentState == null) {
 					return false;
-				} else if (!state.equals(nextState)) {
+				} else if (!matchState.equals(recentState)) {
 					return false;
 				}
 			}

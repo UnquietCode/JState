@@ -24,7 +24,9 @@
 package unquietcode.tools.esm;
 
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * A state machine which runs on enums. Note that null is a valid state
@@ -58,8 +60,28 @@ public class EnumStateMachine<T extends Enum<T>> extends WrappedStateMachine<Enu
 	 * @param includeSelf if true, will also create loops
 	 */
 	public void addAll(Class<T> clazz, boolean includeSelf) {
+		addAll(clazz, includeSelf, false);
+	}
+
+	/**
+	 * Add transitions between every enum in the class.
+	 * If includeSelf is set, then every enum state will
+	 * also have a transition added which returns to itself.
+	 *
+	 * @param clazz this enum class
+	 * @param includeSelf if true, will also create loops
+	 * @param includeNull if true, will also consider the null state
+	 */
+	public void addAll(Class<T> clazz, boolean includeSelf, boolean includeNull) {
 		setType(clazz);
-		addAllTransitions(Arrays.asList(clazz.getEnumConstants()), includeSelf);
+
+		List<T> allStates = new ArrayList<>(Arrays.asList(clazz.getEnumConstants()));
+
+		if (includeNull) {
+			allStates.add(null);
+		}
+
+		addAllTransitions(allStates, includeSelf);
 	}
 
 	/**
