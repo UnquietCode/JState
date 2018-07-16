@@ -24,7 +24,7 @@
 package unquietcode.tools.esm;
 
 
-import java.util.*;
+import java.util.Arrays;
 
 /**
  * A state machine which runs on enums. Note that null is a valid state
@@ -82,7 +82,7 @@ public class EnumStateMachine<T extends Enum<T>> extends WrappedStateMachine<Enu
 
 	@Override
 	protected EnumWrapper<T> wrap(T unwrapped) {
-		return new EnumWrapper<T>(unwrapped);
+		return new EnumWrapper<>(unwrapped);
 	}
 
 	@Override

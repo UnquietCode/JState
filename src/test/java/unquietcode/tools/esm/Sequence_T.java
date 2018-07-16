@@ -38,6 +38,49 @@ public class Sequence_T {
 		assertEquals(1, counter.get());
 	}
 
+	@Test
+	public void test_sequential_match_on_initial_state() {
+		EnumStateMachine<Color> sm = new EnumStateMachine<>(Color.Red);
+		sm.addTransition(Color.Red, Color.Green);
+		sm.addTransition(Color.Green, Color.Orange);
+		sm.addTransition(Color.Orange, Color.Red);
+
+		final List<Color> _pattern = Arrays.asList(Color.Red, Color.Green, Color.Orange);
+		final AtomicInteger counter = new AtomicInteger(0);
+
+		sm.onSequence(_pattern, pattern -> {
+			assertEquals(_pattern, pattern);
+			counter.incrementAndGet();
+		});
+
+		sm.transition(Color.Green);
+		sm.transition(Color.Orange);
+
+		assertEquals(1, counter.get());
+	}
+
+	@Test
+	public void test_sequential_match_with_null_initial_state() {
+		EnumStateMachine<Color> sm = new EnumStateMachine<>(null);
+		sm.addTransition(null, Color.Green);
+		sm.addTransition(Color.Green, Color.Orange);
+		sm.addTransition(Color.Orange, Color.Red);
+
+		final List<Color> _pattern = Arrays.asList(null, Color.Green, Color.Orange);
+		final AtomicInteger counter = new AtomicInteger(0);
+
+		sm.onSequence(_pattern, pattern -> {
+			assertEquals(_pattern, pattern);
+			counter.incrementAndGet();
+		});
+
+		sm.transition(Color.Green);
+		sm.transition(Color.Orange);
+
+		assertEquals(1, counter.get());
+	}
+
+
 	public enum Color implements State {
 		Red, Blue, Green, Orange
 	}

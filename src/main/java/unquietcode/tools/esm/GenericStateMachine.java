@@ -40,18 +40,18 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 
 	// states, and the routers that route them
 	private ExecutorService executor = _newExecutor();
-	private final Map<StateWrapper, StateContainer> states = new HashMap<StateWrapper, StateContainer>();
-	private final List<StateRouter<T>> routers = new ArrayList<StateRouter<T>>();
+	private final Map<StateWrapper, StateContainer> states = new HashMap<>();
+	private final List<StateRouter<T>> routers = new ArrayList<>();
 
 	// sequence matching
 	private int maxRecent = 0;
-	private final Queue<State> recentStates = new ArrayDeque<State>();
-	private final Set<PatternMatcher> matchers = new HashSet<PatternMatcher>();
+	private final Queue<StateContainer> recentStates = new ArrayDeque<>();
+	private final Set<PatternMatcher> matchers = new HashSet<>();
 
 	// global handlers
-	private final Set<StateHandler<T>> globalOnEntryHandlers = new HashSet<StateHandler<T>>();
-	private final Set<StateHandler<T>> globalOnExitHandlers = new HashSet<StateHandler<T>>();
-	private final Set<TransitionHandler<T>> globalOnTransitionHandlers = new HashSet<TransitionHandler<T>>();
+	private final Set<StateHandler<T>> globalOnEntryHandlers = new HashSet<>();
+	private final Set<StateHandler<T>> globalOnExitHandlers = new HashSet<>();
+	private final Set<TransitionHandler<T>> globalOnTransitionHandlers = new HashSet<>();
 
 	// backing data
 	private StateContainer initial;
@@ -78,6 +78,9 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		current = initial;
 		recentStates.clear();
 		executor = _newExecutor();
+
+		// add back the initial state for pattern matching
+		recentStates.add(initial);
 	}
 
 	@Override
@@ -146,15 +149,15 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	@SuppressWarnings("unchecked")
 	private void doPatternMatching(StateContainer nextState) {
 		if (maxRecent != 0) {
-			recentStates.add(nextState.state);
+			recentStates.add(nextState);
 		}
 
 		if (recentStates.size() > maxRecent) {
 			recentStates.remove();
 		}
 
-		final List<State> recent
-			= Collections.unmodifiableList(new ArrayList<State>(recentStates));
+		final List<StateContainer> recent
+			= Collections.unmodifiableList(new ArrayList<>(recentStates));
 
 		for (PatternMatcher matcher : matchers) {
 			if (matcher.matches(recent.iterator(), recent.size())) {
@@ -641,13 +644,21 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 			this.handler = handler;
 		}
 
-		boolean matches(Iterator<State> it, int size) {
+		boolean matches(Iterator<StateContainer> it, int size) {
 			if (size < pattern.size()) {
 				return false;
 			}
 
 			for (State state : pattern) {
-				if (!state.equals(it.next())) {
+				State nextState = it.next().state;
+
+				if (state == null) {
+					if (nextState != null) {
+						return false;
+					}
+				} else if (nextState == null) {
+					return false;
+				} else if (!state.equals(nextState)) {
 					return false;
 				}
 			}

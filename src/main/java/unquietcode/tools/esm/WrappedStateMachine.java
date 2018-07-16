@@ -38,7 +38,7 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 	}
 
 	public WrappedStateMachine(_Type initial) {
-		proxy = new GenericStateMachine<>(wrap(initial));
+		proxy = new GenericStateMachine<>(_wrap(initial));
 	}
 
 	@Override
