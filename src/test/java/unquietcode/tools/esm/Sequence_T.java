@@ -1,6 +1,8 @@
 package unquietcode.tools.esm;
 
 import org.junit.Test;
+import unquietcode.tools.esm.sequences.Pattern;
+import unquietcode.tools.esm.sequences.PatternBuilder;
 
 import java.util.Arrays;
 import java.util.List;
@@ -34,6 +36,31 @@ public class Sequence_T {
 		sm.transition(Color.Green);
 		sm.transition(Color.Orange);
 		sm.transition(Color.Red);
+
+		assertEquals(1, counter.get());
+	}
+
+	@Test
+	public void testSequentialMatchWithWildcard() {
+		EnumStateMachine<Color> sm = new EnumStateMachine<>();
+		sm.addAll(Color.class, true, true);
+
+		final Pattern<Color> _pattern = PatternBuilder.<Color>create()
+			.add(Color.Red, Color.Blue)
+			.addWildcard()
+			.add(Color.Green)
+		.build();
+
+		final AtomicInteger counter = new AtomicInteger(0);
+
+		sm.onSequence(_pattern, pattern -> {
+			counter.incrementAndGet();
+		});
+
+		sm.transition(Color.Red);
+		sm.transition(Color.Blue);
+		sm.transition(Color.Orange);
+		sm.transition(Color.Green);
 
 		assertEquals(1, counter.get());
 	}

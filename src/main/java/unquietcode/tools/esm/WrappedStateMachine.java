@@ -24,6 +24,8 @@
 package unquietcode.tools.esm;
 
 import unquietcode.tools.esm.routing.StateRouter;
+import unquietcode.tools.esm.sequences.Pattern;
+import unquietcode.tools.esm.sequences.PatternBuilder;
 
 import java.util.*;
 import java.util.concurrent.Future;
@@ -167,8 +169,25 @@ public abstract class WrappedStateMachine<_Wrapper extends State, _Type> impleme
 	}
 
 	@Override
-	public HandlerRegistration onSequence(List<_Type> pattern, SequenceHandler<_Type> handler) {
-		return proxy.onSequence(wrap(pattern), new SequenceWrapper(handler));
+	public HandlerRegistration onSequence(Pattern<_Type> pattern, SequenceHandler<_Type> handler) {
+		PatternBuilder<_Wrapper> patternBuilder = PatternBuilder.create();
+
+		for (Object type : pattern.pattern()) {
+
+			if (PatternBuilder.isWildcard(type)) {
+				patternBuilder.addWildcard();
+				continue;
+			}
+
+			@SuppressWarnings("unchecked")
+			_Type type_ = (_Type) type;
+
+			_Wrapper wrapped = _wrap(type_);
+			patternBuilder.add(wrapped);
+		}
+
+		Pattern<_Wrapper> pattern_ = patternBuilder.build();
+		return proxy.onSequence(pattern_, new SequenceWrapper(handler));
 	}
 
 	@Override

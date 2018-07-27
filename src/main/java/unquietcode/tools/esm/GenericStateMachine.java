@@ -24,6 +24,8 @@
 package unquietcode.tools.esm;
 
 import unquietcode.tools.esm.routing.StateRouter;
+import unquietcode.tools.esm.sequences.Pattern;
+import unquietcode.tools.esm.sequences.PatternBuilder;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -46,7 +48,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	// sequence matching
 	private int maxRecent = 0;
 	private final Queue<StateContainer> recentStates = new ArrayDeque<>();
-	private final Set<PatternMatcher> matchers = new HashSet<>();
+	private final Set<PatternMatcher<T>> matchers = new HashSet<>();
 
 	// global handlers
 	private final Set<StateHandler<T>> globalOnEntryHandlers = new HashSet<>();
@@ -159,9 +161,11 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		final List<StateContainer> recent
 			= Collections.unmodifiableList(new ArrayList<>(recentStates));
 
-		for (PatternMatcher matcher : matchers) {
-			if (matcher.matches(recent)) {
-				matcher.handler.onMatch(matcher.pattern);
+		for (PatternMatcher<T> matcher : matchers) {
+			Optional<List<T>> matches = matcher.matches(recent);
+
+			if (matches.isPresent()) {
+				matcher.handler.onMatch(matches.get());
 			}
 		}
 	}
@@ -400,29 +404,35 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	}
 
 	@Override
-	public synchronized HandlerRegistration onSequence(List<T> pattern, SequenceHandler<T> handler) {
-		List<State> _pattern = Collections.<State>unmodifiableList(pattern);
-		final PatternMatcher matcher = new PatternMatcher(_pattern, handler);
+	public HandlerRegistration onSequence(Pattern<T> pattern, SequenceHandler<T> handler) {
+		final PatternMatcher<T> matcher = new PatternMatcher<>(pattern, handler);
 		matchers.add(matcher);
-		maxRecent = Math.max(maxRecent, pattern.size());
 
-		return new HandlerRegistration() {
-			public void unregister() {
-				matchers.remove(matcher);
-			}
+		// recalculate the cache size on add
+		maxRecent = Math.max(maxRecent, pattern.length());
+
+		return () -> {
+			matchers.remove(matcher);
+
+			// recalculate the cache size on remove
+			Optional<Integer> max = matchers.stream()
+				.map(e -> e.pattern.length())
+				.max(Integer::compareTo);
+
+			maxRecent = max.orElse(0);
 		};
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
 	public synchronized boolean addTransition(T fromState, T toState) {
-		return addTransitions(null, true, fromState, Arrays.asList(toState));
+		return addTransitions(null, true, fromState, Collections.singletonList(toState));
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
 	public synchronized boolean addTransition(T fromState, T toState, TransitionHandler<T> callback) {
-		return addTransitions(callback, true, fromState, Arrays.asList(toState));
+		return addTransitions(callback, true, fromState, Collections.singletonList(toState));
 	}
 
 	@Override
@@ -516,14 +526,13 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		}
 
 		int i = 1;
-		Map<StateWrapper, StateContainer> sortedStates = new TreeMap<StateWrapper, StateContainer>(states);
+		Map<StateWrapper, StateContainer> sortedStates = new TreeMap<>(states);
 
 		for (Map.Entry<StateWrapper, StateContainer> entry : sortedStates.entrySet()) {
 			sb.append("\t").append(fullString(entry.getKey().state)).append(" : {");
 
 			int j = 1;
-			Map<StateContainer, Transition> sortedTransitions
-				= new TreeMap<StateContainer, Transition>(entry.getValue().transitions);
+			Map<StateContainer, Transition> sortedTransitions = new TreeMap<>(entry.getValue().transitions);
 
 			for (Transition t : sortedTransitions.values()) {
 				sb.append(fullString(t.next.state));
@@ -556,9 +565,9 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 
 	private static class StateContainer implements Comparable<StateContainer> {
 		final State state;
-		final Map<StateContainer, Transition> transitions = new HashMap<StateContainer, Transition>();
-		final Set<StateHandler> entryActions = new HashSet<StateHandler>();
-		final Set<StateHandler> exitActions = new HashSet<StateHandler>();
+		final Map<StateContainer, Transition> transitions = new HashMap<>();
+		final Set<StateHandler> entryActions = new HashSet<>();
+		final Set<StateHandler> exitActions = new HashSet<>();
 
 		StateContainer(State state) {
 			this.state = state;
@@ -617,7 +626,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 
 	private static class Transition {
 		final StateContainer next;
-		final Set<TransitionHandler> callbacks = new HashSet<TransitionHandler>();
+		final Set<TransitionHandler> callbacks = new HashSet<>();
 
 		Transition(StateContainer next) {
 			this.next = next;
@@ -635,38 +644,48 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 //		}
 	}
 
-	private static class PatternMatcher {
-		private final List<State> pattern;
+	private static class PatternMatcher<T> {
+		private final Pattern<T> pattern;
 		private final SequenceHandler handler;
 
-		PatternMatcher(List<State> pattern, SequenceHandler handler) {
+		PatternMatcher(Pattern<T> pattern, SequenceHandler handler) {
 			this.pattern = pattern;
 			this.handler = handler;
 		}
 
-		boolean matches(List<StateContainer> states) {
-			for (int i = pattern.size() - 1; i >= 0; --i) {
-				int j = states.size() - (pattern.size() - i);
+		Optional<List<T>> matches(List<StateContainer> states) {
+			List<T> matches = new ArrayList<>();
+			List<Object> patternStates = this.pattern.pattern();
+
+			for (int i = patternStates.size() - 1; i >= 0; --i) {
+				int j = states.size() - (patternStates.size() - i);
 
 				if (j < 0) {
-					return false;
+					return Optional.empty();
 				}
 
-				State matchState = pattern.get(i);
+				Object matchState = patternStates.get(i);
 				State recentState = states.get(j).state;
 
-				if (matchState == null) {
+				if (PatternBuilder.isWildcard(matchState)) {
+					// nothing, do no state checking
+				} else if (matchState == null) {
 					if (recentState != null) {
-						return false;
+						return Optional.empty();
 					}
 				} else if (recentState == null) {
-					return false;
+					return Optional.empty();
 				} else if (!matchState.equals(recentState)) {
-					return false;
+					return Optional.empty();
 				}
+
+				@SuppressWarnings("unchecked")
+				T recentState_ = (T) recentState;
+				matches.add(recentState_);
 			}
 
-			return true;
+			Collections.reverse(matches);
+			return Optional.of(matches);
 		}
 	}
 

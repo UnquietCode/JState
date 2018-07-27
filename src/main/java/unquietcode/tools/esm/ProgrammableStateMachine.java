@@ -23,6 +23,9 @@
 
 package unquietcode.tools.esm;
 
+import unquietcode.tools.esm.sequences.Pattern;
+import unquietcode.tools.esm.sequences.PatternBuilder;
+
 import java.util.List;
 
 /**
@@ -82,7 +85,12 @@ public interface ProgrammableStateMachine<T> {
 	 * @param handler to handle the match
 	 * @return registration to assist in removing the handler
 	 */
-	HandlerRegistration onSequence(List<T> pattern, SequenceHandler<T> handler);
+	default HandlerRegistration onSequence(List<T> pattern, SequenceHandler<T> handler) {
+		Pattern<T> pattern_ = PatternBuilder.createFrom(pattern);
+		return onSequence(pattern_, handler);
+	}
+
+	HandlerRegistration onSequence(Pattern<T> pattern, SequenceHandler<T> handler);
 
 	/*
 		Adds a transition from one state to another.
