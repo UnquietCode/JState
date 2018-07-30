@@ -1,4 +1,4 @@
-# JState (v2.1) [![Build Status](https://travis-ci.org/UnquietCode/JState.png?branch=master)](https://travis-ci.org/UnquietCode/JState)
+# JState (v3.0) [![Build Status](https://travis-ci.org/UnquietCode/JState.png?branch=master)](https://travis-ci.org/UnquietCode/JState)
 A core Java tool which provides state machine semantics using enums, strings, or anything else you
 want to represent the various states. States have transitions which can move them to other states.
 Callbacks are provided for transitions, and for each state when entering or exiting. It is also
@@ -11,15 +11,17 @@ generally better to construct your state machine up front and not modify it ther
 EnumStateMachine and StringStateMachine in particular can be serialized to and from their string
 representations.
 
+As of version 3.0, the minimum version of Java required is JDK 8.
+
 # Installation
 The project is built using Maven, and the artifacts are available from Maven Central. (If you
-are a current user of the tool, note that the group name has changed to accommodate Sonatype's
-repository hosting requirements.)
+are a current user of the tool, note that the group name has been recently changed to
+accommodate Sonatype's repository hosting requirements.)
 ```
 <dependency>
     <groupId>com.unquietcode.tools.jstate</groupId>
     <artifactId>jstate</artifactId>
-    <version>2.1</version>
+    <version>3.0</version>
 </dependency>
 ```
 
@@ -38,7 +40,7 @@ enum State {
 
 ...
 
-EnumStateMachine<State> esm = new EnumStateMachine<State>(State.Ready);
+EnumStateMachine<State> esm = new EnumStateMachine<>(State.Ready);
 esm.addTransitions(State.Ready, State.Running, State.Finished);
 esm.addTransitions(State.Running, State.Paused, State.Stopping);
 esm.addTransitions(State.Paused, State.Running, State.Stopping);
@@ -54,9 +56,8 @@ method supports mapping from 1..n states. In the example above, we see that some
 one other states. The `null` state is also a possibility, depending on your preference.
 
 Callbacks can be added as transitions are defined, and fire during transition between states:
-
 ```java
-TransitionHandler<State> cb = new TransitionHandler<State>() {
+TransitionHandler<State> cb = new TransitionHandler<>() {
     public void onTransition(State from, State to) {
         // ....
     }
@@ -81,6 +82,7 @@ esm.onExiting(State.Running, new StateHandler<State>() {
 ```
 
 `StateRouters` allow you to 'deflect' or 'redirect' a transition based on your own custom logic.
+There are several pre-defined routers available which provide round-robin and randomized routing.
 ```java
 esm.routeBeforeEntering(TestStates.Three, new StateRouter<TestStates>() {
 	public TestStates route(TestStates current, TestStates next) {
@@ -92,11 +94,27 @@ esm.routeBeforeEntering(TestStates.Three, new StateRouter<TestStates>() {
 `SequenceHandlers` are callbacks which are triggered whenever the specified sequence of states
 occurs in the state machine.
 ```java
-List<Color> _pattern = Arrays.asList(Color.Blue, Color.Green, Color.Orange);
+final List<Color> _pattern = Arrays.asList(Color.Blue, Color.Green, Color.Orange);
 
 sm.onSequence(_pattern, new SequenceHandler<Color>() {
 	public void onMatch(List<Color> pattern) {
-		assertEquals(_pattern, pattern);
+		// pattern equals [Blue, Green, Orange]
+	}
+});
+```
+
+There is also support for wildcard matching in sequences, available through the use
+of the `PatternBuilder` class.
+```java
+final Pattern<Color> _pattern = PatternBuilder.<Color>create()
+	.add(Color.Red, Color.Blue)
+	.addWildcard()
+	.add(Color.Green)
+.build();
+
+sm.onSequence(_pattern, new SequenceHandler<Color>() {
+	public void onMatch(List<Color> pattern) {
+		// pattern equals [Red, Blue, Purple, Green]
 	}
 });
 ```
@@ -145,7 +163,7 @@ sm.transition(null);
 ```
 
 
-See the [tests](src/test/java/unquietcode/tools/esm/EnumStateMachine_T.java)
+See the [tests](src/test/java/unquietcode/tools/esm)
 for more usage examples, as well as the provided javadocs.
 
 # License
