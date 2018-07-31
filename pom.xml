@@ -5,7 +5,7 @@
 
 	<groupId>com.unquietcode.tools.jstate</groupId>
 	<artifactId>jstate</artifactId>
-	<version>3.0</version>
+	<version>3.1-SNAPSHOT</version>
 	<packaging>bundle</packaging>
 
 	<name>JState</name>
