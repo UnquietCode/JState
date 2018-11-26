@@ -1,7 +1,7 @@
 /*******************************************************************************
  The MIT License (MIT)
 
- Copyright (c) 2013 Benjamin Fagin
+ Copyright (c) 2018 Benjamin Fagin
 
  Permission is hereby granted, free of charge, to any person obtaining a copy of
  this software and associated documentation files (the "Software"), to deal in
@@ -21,14 +21,21 @@
  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-package unquietcode.tools.esm;
+package unquietcode.tools.esm.sequences;
+
+import java.util.List;
 
 /**
- * @deprecated use {@link unquietcode.tools.esm.sequences.SequenceHandler} instead
- *
  * @author Ben Fagin
  * @version 2013-07-08
  */
-@Deprecated
 @FunctionalInterface
-public interface SequenceHandler<T> extends unquietcode.tools.esm.sequences.SequenceHandler<T> { }
+public interface SequenceHandler<T> {
+
+	/**
+	 * Handle a match of the given sequence.
+	 *
+	 * @param pattern the pattern which was matched
+	 */
+	void onMatch(List<T> pattern);
+}

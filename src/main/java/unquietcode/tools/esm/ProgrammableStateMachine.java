@@ -25,6 +25,7 @@ package unquietcode.tools.esm;
 
 import unquietcode.tools.esm.sequences.Pattern;
 import unquietcode.tools.esm.sequences.PatternBuilder;
+import unquietcode.tools.esm.sequences.SequenceHandler;
 
 import java.util.List;
 
