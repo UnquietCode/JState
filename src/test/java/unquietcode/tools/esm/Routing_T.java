@@ -1,5 +1,6 @@
 package unquietcode.tools.esm;
 
+import org.junit.Assert;
 import org.junit.Test;
 import unquietcode.tools.esm.routing.RandomStateRouter;
 import unquietcode.tools.esm.routing.RoundRobinStateRouter;
@@ -15,7 +16,52 @@ import static org.junit.Assert.assertTrue;
  */
 public class Routing_T {
 
+	@Test(expected=TransitionException.class)
+	public void testSyncWithinAsync() {
+		EnumStateMachine<TestStates> esm = new EnumStateMachine<>(null);
+		esm.addAll(TestStates.class, true, true);
+
+		esm.onEntering(TestStates.Two, (state) -> {
+			esm.transition(TestStates.Three);
+		});
+
+		esm.transition(TestStates.One);
+		esm.transition(TestStates.Two);
+		Assert.fail();
+	}
+
 	@Test
+	public void testAsyncWithinAsync() {
+		EnumStateMachine<TestStates> esm = new EnumStateMachine<>(null);
+		esm.addAll(TestStates.class, true, true);
+
+		final AtomicInteger c1 = new AtomicInteger(0);
+		final AtomicInteger c2 = new AtomicInteger(0);
+		final AtomicInteger c3 = new AtomicInteger(0);
+
+		esm.onEntering(TestStates.One, state -> c1.incrementAndGet());
+
+		esm.onEntering(TestStates.Two, (state) -> {
+			c2.incrementAndGet();
+			esm.transitionAsync(TestStates.Three);
+		});
+
+		esm.onEntering(TestStates.Three, state -> c3.incrementAndGet());
+
+		esm.transition(TestStates.One);
+		esm.transition(TestStates.Two);
+
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+
+		assertEquals(1, c1.get());
+		assertEquals(1, c2.get());
+		assertEquals(1, c3.get());
+	}
+
 	public void testSimpleRedirect() {
 		EnumStateMachine<TestStates> esm = new EnumStateMachine<>(TestStates.One);
 		esm.addAll(TestStates.class, true);
@@ -25,9 +71,7 @@ public class Routing_T {
 		final AtomicInteger c3 = new AtomicInteger(0);
 
 		esm.onEntering(TestStates.One, state -> c1.incrementAndGet());
-
 		esm.onEntering(TestStates.Two, state -> c2.incrementAndGet());
-
 		esm.onEntering(TestStates.Three, state -> c3.incrementAndGet());
 
 		esm.routeBeforeEntering(TestStates.Three, (current, next) -> {

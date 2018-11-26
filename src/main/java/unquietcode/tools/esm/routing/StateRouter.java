@@ -38,7 +38,8 @@ public interface StateRouter<T> {
 	 * transition, stop it, or redirect it.
 	 *
 	 * To accomplish this, return the state which should
-	 * be the next state. If no preference, return null.
+	 * be the next state. To indicate no preference,
+	 * return null.
 	 *
 	 * The first router on a {@link StateMachine} instance
 	 * to return a non-null value 'wins'.

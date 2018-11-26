@@ -29,6 +29,12 @@ import unquietcode.tools.esm.sequences.PatternBuilder;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 
 
 /**
@@ -55,6 +61,11 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	private final Set<StateHandler<T>> globalOnExitHandlers = new HashSet<>();
 	private final Set<TransitionHandler<T>> globalOnTransitionHandlers = new HashSet<>();
 
+	// locks
+	private final ReentrantLock transitionLock = new ReentrantLock(true);
+	private final ReadWriteLock routingLock = new ReentrantReadWriteLock(true);
+	private final Lock sequenceLock = new ReentrantLock(true);
+
 	// backing data
 	private StateContainer initial;
 	private StateContainer current;
@@ -70,24 +81,60 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 		reset();
 	}
 
+	private void doWithTransitionLock(Runnable fn) {
+		doWithLock(transitionLock, fn);
+	}
+
+	private <Z> Z doWithTransitionLock(Supplier<Z> fn) {
+		return doWithLock(transitionLock, fn);
+	}
+
+	private void doWithLock(Lock lock, Runnable fn) {
+		doWithLock(lock, (Supplier<Void>) () -> {
+			fn.run();
+			return null;
+		});
+	}
+
+	private <Z> Z doWithLock(Lock lock, Supplier<Z> fn) {
+		lock.lock();
+
+		try {
+			return fn.get();
+		} finally {
+			lock.unlock();
+		}
+	}
+
 	@Override
-	public synchronized void reset() {
+	public void reset() {
+		doWithTransitionLock(() -> {
 
-		// wait for all tasks to finish first
-		executor.shutdown();
+			// wait for all tasks to finish first
+			executor.shutdown();
 
-		transitions = 0;
-		current = initial;
-		recentStates.clear();
-		executor = _newExecutor();
+			transitions = 0;
+			current = initial;
+			executor = _newExecutor();
 
-		// add back the initial state for pattern matching
-		recentStates.add(initial);
+			doWithLock(sequenceLock, () -> {
+
+				// clear all recent states
+				recentStates.clear();
+
+				// add back the initial state for pattern matching
+				recentStates.add(initial);
+			});
+		});
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public synchronized boolean transition(final T next) throws TransitionException {
+	public boolean transition(final T next) throws TransitionException {
+		if (transitionLock.isLocked() && transitionLock.isHeldByCurrentThread()) {
+			throw new TransitionException("a transition inside of a transition cannot be synchronous");
+		}
+
 		Future<Boolean> result = transitionAsync(next);
 
 		try {
@@ -104,29 +151,39 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	}
 
 	@Override
-	public synchronized Future<Boolean> transitionAsync(final T next) throws TransitionException {
-		final StateContainer requestedState = getState(next);
-		final StateContainer nextState = route(next, requestedState);
+	public Future<Boolean> transitionAsync(final T next) throws TransitionException {
+		final AtomicReference<StateContainer> _requestedState = new AtomicReference<>();
+		final AtomicReference<StateContainer> _nextState = new AtomicReference<>();
+
+		doWithTransitionLock(() -> {
+			_requestedState.set(getState(next));
+			_nextState.set(route(next, _requestedState.get()));
+		});
+
+		final StateContainer requestedState = _requestedState.get();
+		final StateContainer nextState = _nextState.get();
 
 		Callable<Boolean> callable = () -> {
-			if (!current.transitions.containsKey(nextState)) {
-				throw new TransitionException("No transition exists between "+ current +" and "+ requestedState);
-			}
-
-			try {
-				return _transition(nextState);
-			} catch (Exception e) {  // TODO maybe scope this to only our own exception types
-				List<Runnable> unfinished = executor.shutdownNow();
-
-				for (Runnable runnable : unfinished) {
-					if (runnable instanceof Future) {
-						((Future) runnable).cancel(true);
-					}
+			return doWithTransitionLock(() -> {
+				if (!current.transitions.containsKey(nextState)) {
+					throw new TransitionException("No transition exists between "+current+" and "+requestedState);
 				}
 
-				executor = _newExecutor();
-				throw e;
-			}
+				try {
+					return _transition(nextState);
+				} catch (Exception e) {  // TODO maybe scope this to only our own exception types
+					List<Runnable> unfinished = executor.shutdownNow();
+
+					for (Runnable runnable : unfinished) {
+						if (runnable instanceof Future) {
+							((Future) runnable).cancel(true);
+						}
+					}
+
+					executor = _newExecutor();
+					throw e;
+				}
+			});
 		};
 
 		return executor.submit(callable);
@@ -150,16 +207,25 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 
 	@SuppressWarnings("unchecked")
 	private void doPatternMatching(StateContainer nextState) {
-		if (maxRecent != 0) {
-			recentStates.add(nextState);
-		}
+		final AtomicReference<List<StateContainer>> _recent = new AtomicReference<>();
+		final AtomicReference<List<PatternMatcher<T>>> _matchers = new AtomicReference<>();
 
-		if (recentStates.size() > maxRecent) {
-			recentStates.remove();
-		}
+		doWithLock(sequenceLock, () -> {
 
-		final List<StateContainer> recent
-			= Collections.unmodifiableList(new ArrayList<>(recentStates));
+			if (maxRecent != 0) {
+				recentStates.add(nextState);
+			}
+
+			if (recentStates.size() > maxRecent) {
+				recentStates.remove();
+			}
+
+			_recent.set(new ArrayList<>(recentStates));
+			_matchers.set(new ArrayList<>(matchers));
+		});
+
+		List<StateContainer> recent = Collections.unmodifiableList(_recent.get());
+		List<PatternMatcher<T>> matchers = _matchers.get();
 
 		for (PatternMatcher<T> matcher : matchers) {
 			Optional<List<T>> matches = matcher.matches(recent);
@@ -168,14 +234,20 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 				matcher.handler.onMatch(matches.get());
 			}
 		}
+
 	}
 
-	@SuppressWarnings("unchecked")
 	private StateContainer route(T next, StateContainer requestedState) {
+		final List<StateRouter<T>> _routers = doWithLock(routingLock.readLock(), () -> {
+			return new ArrayList<>(routers);
+		});
+
 		StateContainer nextState = null;
 
 		// routing
-		for (StateRouter<T> router : routers) {
+		for (StateRouter<T> router : _routers) {
+
+			@SuppressWarnings("unchecked")
 			T decision = router.route((T) current.state, next);
 
 			if (decision != null) {
@@ -237,95 +309,127 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public synchronized T currentState() {
-		return (T) current.state;
+	public T currentState() {
+		return doWithTransitionLock(() -> {
+			return (T) current.state;
+		});
 	}
 
 	@Override
-	public synchronized long transitionCount() {
-		return transitions;
+	public long transitionCount() {
+		return doWithTransitionLock(() -> {
+			return this.transitions;
+		});
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public synchronized T initialState() {
-		return (T) initial.state;
+	public T initialState() {
+		return doWithTransitionLock(() -> {
+			return (T) initial.state;
+		});
 	}
 
 	@Override
-	public synchronized void setInitialState(T state) {
-		initial = getState(state);
+	public void setInitialState(T state) {
+		doWithTransitionLock(() -> {
+			initial = getState(state);
+		});
 	}
 
 	@Override
-	public synchronized void addAllTransitions(List<T> states, boolean includeSelf) {
-		for (T state : states) {
-			List<T> _toStates;
+	public void addAllTransitions(List<T> states, boolean includeSelf) {
+		doWithTransitionLock(() -> {
+			for (T state : states) {
+				List<T> _toStates;
 
-			if (includeSelf) {
-				_toStates = states;
-			} else {
-				_toStates = new ArrayList<T>(states);
-				_toStates.remove(state);
+				if (includeSelf) {
+					_toStates = states;
+				} else {
+					_toStates = new ArrayList<T>(states);
+					_toStates.remove(state);
+				}
+
+				addTransitions(state, _toStates);
 			}
-
-			addTransitions(state, _toStates);
-		}
+		});
 	}
 
 	@Override
 	public HandlerRegistration onEntering(final StateHandler<T> callback) {
-		globalOnEntryHandlers.add(callback);
+		doWithTransitionLock(() -> {
+			globalOnEntryHandlers.add(callback);
+		});
 
 		return new HandlerRegistration() {
 			public void unregister() {
-				globalOnEntryHandlers.remove(callback);
+				doWithTransitionLock(() -> {
+					globalOnEntryHandlers.remove(callback);
+				});
 			}
 		};
 	}
 
 	@Override
-	public synchronized HandlerRegistration onEntering(T state, final StateHandler<T> callback) {
-		final StateContainer s = getState(state);
-		s.entryActions.add(callback);
+	public HandlerRegistration onEntering(T state, final StateHandler<T> callback) {
+		final StateContainer s = doWithTransitionLock(() -> {
+			StateContainer _s = getState(state);
+			_s.entryActions.add(callback);
+			return _s;
+		});
 
 		return new HandlerRegistration() {
 			public void unregister() {
-				s.entryActions.remove(callback);
+				doWithTransitionLock(() -> {
+					s.entryActions.remove(callback);
+				});
 			}
 		};
 	}
 
 	@Override
 	public HandlerRegistration onExiting(final StateHandler<T> callback) {
-		globalOnExitHandlers.add(callback);
+		doWithTransitionLock(() -> {
+			globalOnExitHandlers.add(callback);
+		});
 
 		return new HandlerRegistration() {
 			public void unregister() {
-				globalOnExitHandlers.remove(callback);
+				doWithTransitionLock(() -> {
+					globalOnExitHandlers.remove(callback);
+				});
 			}
 		};
 	}
 
 	@Override
-	public synchronized HandlerRegistration onExiting(T state, final StateHandler<T> callback) {
-		final StateContainer s = getState(state);
-		s.exitActions.add(callback);
+	public HandlerRegistration onExiting(T state, final StateHandler<T> callback) {
+		final StateContainer s = doWithTransitionLock(() -> {
+			StateContainer _s = getState(state);
+			_s.exitActions.add(callback);
+			return _s;
+		});
 
 		return new HandlerRegistration() {
 			public void unregister() {
-				s.exitActions.remove(callback);
+				doWithTransitionLock(() -> {
+					s.exitActions.remove(callback);
+				});
 			}
 		};
 	}
 
 	@Override
-	public synchronized HandlerRegistration onTransition(final TransitionHandler<T> callback) {
-		globalOnTransitionHandlers.add(callback);
+	public HandlerRegistration onTransition(final TransitionHandler<T> callback) {
+		doWithTransitionLock(() -> {
+			globalOnTransitionHandlers.add(callback);
+		});
 
 		return new HandlerRegistration() {
 			public void unregister() {
-				globalOnTransitionHandlers.remove(callback);
+				doWithTransitionLock(() -> {
+					globalOnTransitionHandlers.remove(callback);
+				});
 			}
 		};
 	}
@@ -333,33 +437,41 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public synchronized HandlerRegistration onTransition(final T from, final T to, final TransitionHandler<T> callback) {
-		addTransitions(callback, false, from, Arrays.asList(to));
+	public HandlerRegistration onTransition(final T from, final T to, final TransitionHandler<T> callback) {
+		doWithTransitionLock(() -> {
+			addTransitions(callback, false, from, Collections.singletonList(to));
+		});
 
 		return new HandlerRegistration() {
 			public void unregister() {
-				removeCallback(callback, from, to);
+				doWithTransitionLock(() -> {
+					removeCallback(callback, from, to);
+				});
 			}
 		};
 	}
 
 	@Override
-	public synchronized HandlerRegistration routeOnTransition(final StateRouter<T> router) {
+	public HandlerRegistration routeOnTransition(final StateRouter<T> router) {
 		if (router == null) {
 			throw new IllegalArgumentException("router cannot be null");
 		}
 
-		routers.add(router);
+		doWithLock(routingLock.writeLock(), () -> {
+			routers.add(router);
+		});
 
 		return new HandlerRegistration() {
 			public void unregister() {
-				routers.remove(router);
+				doWithLock(routingLock.writeLock(), () -> {
+					routers.remove(router);
+				});
 			}
 		};
 	}
 
 	@Override
-	public synchronized HandlerRegistration routeOnTransition(final T from, final T to, final StateRouter<T> router) {
+	public HandlerRegistration routeOnTransition(final T from, final T to, final StateRouter<T> router) {
 		return routeOnTransition(new StateRouter<T>() {
 			public T route(T current, T next) {
 
@@ -374,7 +486,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	}
 
 	@Override
-	public synchronized HandlerRegistration routeBeforeEntering(final T to, final StateRouter<T> router) {
+	public HandlerRegistration routeBeforeEntering(final T to, final StateRouter<T> router) {
 		return routeOnTransition(new StateRouter<T>() {
 			public T route(T current, T next) {
 
@@ -389,7 +501,7 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	}
 
 	@Override
-	public synchronized HandlerRegistration routeAfterExiting(final T from, final StateRouter<T> router) {
+	public HandlerRegistration routeAfterExiting(final T from, final StateRouter<T> router) {
 		return routeOnTransition(new StateRouter<T>() {
 			public T route(T current, T next) {
 
@@ -406,42 +518,45 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	@Override
 	public HandlerRegistration onSequence(Pattern<T> pattern, SequenceHandler<T> handler) {
 		final PatternMatcher<T> matcher = new PatternMatcher<>(pattern, handler);
-		matchers.add(matcher);
 
-		// recalculate the cache size on add
-		maxRecent = Math.max(maxRecent, pattern.length());
+		doWithLock(sequenceLock, () -> {
+			matchers.add(matcher);
+
+			// recalculate the cache size on add
+			maxRecent = Math.max(maxRecent, pattern.length());
+		});
 
 		return () -> {
-			matchers.remove(matcher);
+			doWithLock(sequenceLock, () -> {
+				matchers.remove(matcher);
 
-			// recalculate the cache size on remove
-			Optional<Integer> max = matchers.stream()
-				.map(e -> e.pattern.length())
-				.max(Integer::compareTo);
+				// recalculate the cache size on remove
+				Optional<Integer> max = matchers.stream()
+					.map(e -> e.pattern.length())
+					.max(Integer::compareTo);
 
-			maxRecent = max.orElse(0);
+				maxRecent = max.orElse(0);
+			});
 		};
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
-	public synchronized boolean addTransition(T fromState, T toState) {
+	public boolean addTransition(T fromState, T toState) {
 		return addTransitions(null, true, fromState, Collections.singletonList(toState));
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
-	public synchronized boolean addTransition(T fromState, T toState, TransitionHandler<T> callback) {
+	public boolean addTransition(T fromState, T toState, TransitionHandler<T> callback) {
 		return addTransitions(callback, true, fromState, Collections.singletonList(toState));
 	}
 
 	@Override
-	public synchronized boolean addTransitions(T fromState, T...toStates) {
+	public boolean addTransitions(T fromState, T...toStates) {
 		return addTransitions(null, true, fromState, Arrays.asList(toStates));
 	}
 
 	@Override
-	public synchronized boolean addTransitions(T fromState, List<T> toStates, TransitionHandler<T> callback) {
+	public boolean addTransitions(T fromState, List<T> toStates, TransitionHandler<T> callback) {
 		return addTransitions(callback, true, fromState, toStates);
 	}
 
@@ -456,97 +571,110 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	}
 
 	private boolean addTransitions(TransitionHandler<T> callback, boolean create, T fromState, List<T> toStates) {
-		Set<T> set = new HashSet<T>(toStates);
-		StateContainer from = getState(fromState);
-		boolean modified = false;
+		Set<T> set = new HashSet<>(toStates);
 
-		for (T state : set) {
-			StateContainer to = getState(state);
-			Transition transition = null;
+		return doWithTransitionLock(() -> {
+			StateContainer from = getState(fromState);
+			boolean modified = false;
 
-			if (from.transitions.containsKey(to)) {
-				transition = from.transitions.get(to);
-			} else if (create) {
-				transition = new Transition(to);
-				from.transitions.put(to, transition);
-				modified = true;
+			for (T state : set) {
+				StateContainer to = getState(state);
+				Transition transition = null;
+
+				if (from.transitions.containsKey(to)) {
+					transition = from.transitions.get(to);
+				} else if (create) {
+					transition = new Transition(to);
+					from.transitions.put(to, transition);
+					modified = true;
+				}
+
+				if (transition != null && callback != null) {
+					transition.callbacks.add(callback);
+				}
 			}
 
-			if (transition != null && callback != null) {
-				transition.callbacks.add(callback);
-			}
-		}
-
-		if (modified) { reset(); }
-		return modified;
+			if (modified) { reset(); }
+			return modified;
+		});
 	}
 
 	@Override
-	public synchronized boolean removeTransitions(T fromState, T...toStates) {
+	public boolean removeTransitions(T fromState, T...toStates) {
 		return removeTransitions(fromState, Arrays.asList(toStates));
 	}
 
 	@Override
 	public boolean removeTransitions(T fromState, List<T> toStates) {
-		Set<T> set = new HashSet<T>(toStates);
-		StateContainer from = getState(fromState);
-		boolean modified = false;
+		Set<T> set = new HashSet<>(toStates);
 
-		for (T state : set) {
-			StateContainer to = getState(state);
-			if (from.transitions.remove(to) != null) {
-				modified = true;
+		return doWithTransitionLock(() -> {
+			StateContainer from = getState(fromState);
+			boolean modified = false;
+
+			for (T state : set) {
+				StateContainer to = getState(state);
+
+				if (from.transitions.remove(to) != null) {
+					modified = true;
+				}
 			}
-		}
 
-		if (modified) { reset(); }
-		return modified;
+			if (modified) { reset(); }
+			return modified;
+		});
 	}
 
 	private void removeCallback(TransitionHandler callback, T fromState, T...toStates) {
 		Set<T> set = new HashSet<T>(Arrays.asList(toStates));
-		StateContainer from = getState(fromState);
 
-		for (T state : set) {
-			StateContainer to = getState(state);
-			Transition transition = from.transitions.get(to);
+		doWithTransitionLock(() -> {
+			StateContainer from = getState(fromState);
 
-			if (transition != null) {
-				transition.callbacks.remove(callback);
+			for (T state : set) {
+				StateContainer to = getState(state);
+				Transition transition = from.transitions.get(to);
+
+				if (transition != null) {
+					transition.callbacks.remove(callback);
+				}
 			}
-		}
+		});
 	}
 
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 
-		if (initial != null) {
-			sb.append(fullString(initial.state)).append(" | \n");
-		}
-
-		int i = 1;
-		Map<StateWrapper, StateContainer> sortedStates = new TreeMap<>(states);
-
-		for (Map.Entry<StateWrapper, StateContainer> entry : sortedStates.entrySet()) {
-			sb.append("\t").append(fullString(entry.getKey().state)).append(" : {");
-
-			int j = 1;
-			Map<StateContainer, Transition> sortedTransitions = new TreeMap<>(entry.getValue().transitions);
-
-			for (Transition t : sortedTransitions.values()) {
-				sb.append(fullString(t.next.state));
-
-				if (j++ != sortedTransitions.size()) {
-					sb.append(", ");
-				}
+		doWithTransitionLock(() -> {
+			if (initial != null) {
+				sb.append(fullString(initial.state)).append(" | \n");
 			}
 
-			sb.append("}");
+			int i = 1;
+			Map<StateWrapper, StateContainer> sortedStates = new TreeMap<>(states);
 
-			if (i++ != states.size())
-				sb.append(" | \n");
-		}
+			for (Map.Entry<StateWrapper, StateContainer> entry : sortedStates.entrySet()) {
+				sb.append("\t").append(fullString(entry.getKey().state)).append(" : {");
+
+				int j = 1;
+				Map<StateContainer, Transition> sortedTransitions = new TreeMap<>(entry.getValue().transitions);
+
+				for (Transition t : sortedTransitions.values()) {
+					sb.append(fullString(t.next.state));
+
+					if (j++ != sortedTransitions.size()) {
+						sb.append(", ");
+					}
+				}
+
+				sb.append("}");
+
+				if (i++ != states.size()) {
+					sb.append(" | \n");
+				}
+			}
+		});
 
 		return sb.toString();
 	}
@@ -554,13 +682,15 @@ public class GenericStateMachine<T extends State> implements StateMachine<T> {
 	private StateContainer getState(T token) {
 		StateWrapper wrapped = new StateWrapper(token);
 
-		if (states.containsKey(wrapped)) {
-			return states.get(wrapped);
-		}
+		return doWithTransitionLock(() -> {
+			if (states.containsKey(wrapped)) {
+				return states.get(wrapped);
+			}
 
-		StateContainer s = new StateContainer(token);
-		states.put(wrapped, s);
-		return s;
+			StateContainer s = new StateContainer(token);
+			states.put(wrapped, s);
+			return s;
+		});
 	}
 
 	private static class StateContainer implements Comparable<StateContainer> {
