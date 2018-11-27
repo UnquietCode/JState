@@ -27,7 +27,7 @@ import java.util.concurrent.Future;
 
 /**
  * Provides methods for controlling a state machine without providing direct access to the
- * underlying object. Essentially an immutable {@link EnumStateMachine} instance.
+ * underlying object.
  *
  * @author Ben Fagin
  * @version 2013-04-02
