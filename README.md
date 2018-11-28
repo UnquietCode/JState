@@ -1,4 +1,4 @@
-# JState (v3.0) [![Build Status](https://travis-ci.org/UnquietCode/JState.png?branch=master)](https://travis-ci.org/UnquietCode/JState)
+# JState (v3.1) [![Build Status](https://travis-ci.org/UnquietCode/JState.png?branch=master)](https://travis-ci.org/UnquietCode/JState)
 A core Java tool which provides state machine semantics using enums, strings, or anything else you
 want to represent the various states. States have transitions which can move them to other states.
 Callbacks are provided for transitions, and for each state when entering or exiting. It is also
@@ -21,11 +21,12 @@ accommodate Sonatype's repository hosting requirements.)
 <dependency>
     <groupId>com.unquietcode.tools.jstate</groupId>
     <artifactId>jstate</artifactId>
-    <version>3.0</version>
+    <version>3.1</version>
 </dependency>
 ```
 
-[Javadocs Link](http://www.javadoc.io/doc/com.unquietcode.tools.jstate/jstate/3.0)
+# Documentation
+You can view the [Javadocs](http://www.javadoc.io/doc/com.unquietcode.tools.jstate/jstate/3.1) or the unit tests for more information about how to use the library.
 
 # Usage
 A typical use case might be a state machine for controlling a process, which can move between the
