@@ -25,6 +25,8 @@ accommodate Sonatype's repository hosting requirements.)
 </dependency>
 ```
 
+[Javadocs Link](http://www.javadoc.io/doc/com.unquietcode.tools.jstate/jstate/3.0)
+
 # Usage
 A typical use case might be a state machine for controlling a process, which can move between the
 states [`Ready`, `Running`, `Paused`, `Stopping`, `Stopped`, `Finished`].
