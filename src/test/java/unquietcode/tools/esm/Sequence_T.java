@@ -17,7 +17,7 @@ import static org.junit.Assert.assertEquals;
 public class Sequence_T {
 
 	@Test
-	public void testSequentialMatch() {
+	public void test_sequential_match() {
 		GenericStateMachine<Color> sm = new GenericStateMachine<>(Color.Red);
 		sm.addTransition(Color.Red, Color.Blue);
 		sm.addTransition(Color.Blue, Color.Green);
@@ -41,7 +41,7 @@ public class Sequence_T {
 	}
 
 	@Test
-	public void testSequentialMatchWithWildcard() {
+	public void test_sequential_match_with_wildcard() {
 		EnumStateMachine<Color> sm = new EnumStateMachine<>();
 		sm.addAll(Color.class, true, true);
 

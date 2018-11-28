@@ -62,6 +62,7 @@ public class Routing_T {
 		assertEquals(1, c3.get());
 	}
 
+	@Test
 	public void testSimpleRedirect() {
 		EnumStateMachine<TestStates> esm = new EnumStateMachine<>(TestStates.One);
 		esm.addAll(TestStates.class, true);
