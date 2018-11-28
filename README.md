@@ -26,7 +26,7 @@ accommodate Sonatype's repository hosting requirements.)
 ```
 
 # Documentation
-You can view the [Javadocs](http://www.javadoc.io/doc/com.unquietcode.tools.jstate/jstate/3.1) or the unit tests for more information about how to use the library.
+You can view the provided [Javadocs](http://www.javadoc.io/doc/com.unquietcode.tools.jstate/jstate/3.1) or the [unit tests](src/test/java/unquietcode/tools/esm) for more information about how to use the library.
 
 # Usage
 A typical use case might be a state machine for controlling a process, which can move between the
@@ -166,8 +166,7 @@ sm.transition(null);
 ```
 
 
-See the [tests](src/test/java/unquietcode/tools/esm)
-for more usage examples, as well as the provided javadocs.
+See the [tests](src/test/java/unquietcode/tools/esm) for more usage examples.
 
 # License
 JState is licensed under the MIT license. Go wild.
